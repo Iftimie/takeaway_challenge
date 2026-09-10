@@ -11,17 +11,10 @@ from pydantic import (
 )
 
 
-class RegisterRequest(BaseModel):
+class EmailRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     email: EmailStr = Field(max_length=320)
-    password: SecretStr = Field(min_length=8, max_length=128)
-    name: Annotated[
-        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
-    ]
-    default_address: Annotated[
-        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)
-    ] | None = None
 
     @field_validator("email", mode="before")
     @classmethod
@@ -32,6 +25,25 @@ class RegisterRequest(BaseModel):
     @classmethod
     def lowercase_email(cls, value: str) -> str:
         return value.lower()
+
+
+class RegisterRequest(EmailRequest):
+    password: SecretStr = Field(min_length=8, max_length=128)
+    name: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
+    ]
+    default_address: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)
+    ] | None = None
+
+
+class LoginRequest(EmailRequest):
+    password: SecretStr = Field(min_length=1, max_length=128)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
 
 
 class UserResponse(BaseModel):

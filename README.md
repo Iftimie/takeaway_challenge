@@ -1,8 +1,9 @@
 # Takeaway Service
 
 A take-home backend built one small milestone at a time. Exposes customer
-registration at `POST /auth/register` and `GET /health`, returning HTTP 200 with
-`{"status":"ok"}`. Health checks application liveness, not database readiness.
+registration at `POST /auth/register`, login at `POST /auth/login`, and the
+protected profile at `GET /users/me`. `GET /health` returns HTTP 200 with
+`{"status":"ok"}` and checks application liveness, not database readiness.
 
 ## Setup (Windows PowerShell)
 
@@ -162,8 +163,8 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `29 passed, 1 deselected`. Tests check connectivity, user-table
-constraints, and registration. Tests insert rows inside transactions and roll them back after
+Expected: `52 passed, 1 deselected`. Tests check connectivity, user-table
+constraints, registration, and authentication. Tests insert rows inside transactions and roll them back after
 each test. The default `pytest -q` command runs all tests, including integration
 tests. VS Code can also discover and run individual tests without a marker override:
 
@@ -171,7 +172,7 @@ tests. VS Code can also discover and run individual tests without a marker overr
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `30 passed` when PostgreSQL is running and migrations are applied.
+Expected: `53 passed` when PostgreSQL is running and migrations are applied.
 To run only tests that do not need Docker, use
 `python -m pytest -q -m "not integration"` with the virtual environment's Python.
 Registration tests use an outer transaction and session savepoints, so endpoint
@@ -231,7 +232,7 @@ again, including capitalization variants, returns HTTP 409.
 Rules:
 - Trim surrounding email whitespace, validate its format, then lowercase it.
   Preserve dots and `+tags`; do not apply Gmail-specific alias rules.
-- Passwords are 15-128 characters and are never trimmed. No special-character
+- Passwords are 8-128 characters and are never trimmed. No special-character
   composition rules are imposed. Hashing uses Argon2id via `pwdlib`, with a fresh
   salt for each password. See [FastAPI's hashing guide](https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/).
 - Names are trimmed and must be 1-200 characters; supplied addresses are trimmed
@@ -247,12 +248,61 @@ index decides duplicate conflicts, including competing inserts; only that
 specific violation is translated into HTTP 409. `router.py` maps this outcome
 to HTTP. Other database errors are not mislabeled as duplicate emails.
 
-Email format validation does not verify mailbox ownership. Verification emails,
-login, and JWT issuance are not part of this milestone. Login must use the same
-email normalization policy when implemented.
+Email format validation does not verify mailbox ownership. Verification emails
+are not implemented. Login uses the same email normalization policy.
+
+## Login and current user
+
+Login requires a private `JWT_SECRET` of at least 32 characters in `.env`.
+A key has already been generated for this workspace. On a fresh setup, after
+copying `.env.example`, generate it once (the command writes it without printing):
+
+```powershell
+.\.venv\Scripts\python.exe -c "import secrets; from dotenv import set_key; set_key('.env', 'JWT_SECRET', secrets.token_urlsafe(48))"
+```
+
+Keep that file local. Rerunning the command replaces the key, invalidating
+previously issued tokens. `ACCESS_TOKEN_MINUTES` defaults to 30 and accepts
+1-1440 minutes. Restart Uvicorn after configuration changes. Database settings
+and JWT settings are separate so migration commands do not require a signing key.
+
+After registering a customer, use its credentials to log in:
+
+```powershell
+$body = @{
+    email = 'alice.smith+takeaway@example.com'
+    password = 'a long example passphrase'
+} | ConvertTo-Json
+$login = Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/auth/login -ContentType 'application/json' -Body $body
+$headers = @{ Authorization = "Bearer $($login.access_token)" }
+Invoke-RestMethod http://127.0.0.1:8000/users/me -Headers $headers
+```
+
+Login returns HTTP 200 with `access_token` and `token_type: bearer`. The profile
+returns the authenticated user's ID, email, name, role, and optional address.
+It never includes the password hash. In `/docs`, execute `/auth/login`, copy only
+the access token into **Authorize**, and then execute `/users/me`.
+
+All three roles use the same login route. Public registration still creates
+customers only; staff/admin onboarding remains for later milestones. Login
+checks the password exactly as supplied (1-128 characters), rather than applying
+the registration minimum to existing passwords. Invalid credentials return the
+same HTTP 401 message for an unknown email or wrong password. Unknown emails
+still perform a dummy hash verification to avoid an immediate early return.
+
+JWTs contain the user ID (`sub`), issue time (`iat`), and expiry (`exp`). They are
+signed with HS256, not encrypted, so no personal data is placed in the token.
+Decoding fixes the allowed algorithm and requires all three claims; malformed,
+expired, wrongly signed tokens and tokens for deleted users return HTTP 401.
+`/users/me` reads the current user from PostgreSQL on each request. See
+[PyJWT's documentation](https://pyjwt.readthedocs.io/en/stable/usage.html).
+
+No refresh tokens, logout/revocation mechanism, or rate limiting are included.
+An access token remains usable until it expires, the signing key changes, or
+the user is deleted. Automated login tests use their own key and roll back data.
 
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Login, JWT authentication, and full deployment
+milestones, and review status. Admin provisioning and full deployment
 belong to later milestones.

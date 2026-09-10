@@ -3,9 +3,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.auth.router import router as auth_router
+from app.users.router import router as users_router
 
 app = FastAPI(title="Takeaway Service")
 app.include_router(auth_router)
+app.include_router(users_router)
 
 
 @app.exception_handler(RequestValidationError)

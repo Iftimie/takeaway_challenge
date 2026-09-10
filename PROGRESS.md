@@ -7,8 +7,9 @@
 - Milestone 2: accepted by the user's request to proceed to the next milestone.
 - Milestone 3: explicitly accepted by the user.
 - Milestone 4: explicitly accepted by the user.
-- Milestone 5: explicitly accepted by the user; milestone commit requested.
-- Next step when requested: milestone 6 (login and JWT).
+- Milestone 5: explicitly accepted and committed (`5bdb865`).
+- Milestone 6: explicitly accepted by the user; milestone commit requested.
+- Next step when requested: milestone 7 (initial admin provisioning).
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -71,8 +72,8 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Milestones and acceptance criteria
 
-Milestones 1-5 are **accepted**;
-milestones 6-21 are **not started**. Each is a separate review stop and includes relevant tests or
+Milestones 1-6 are **accepted**;
+milestones 7-21 are **not started**. Each is a separate review stop and includes relevant tests or
 operational verification.
 
 | # | Scope | Acceptance criteria |
@@ -115,6 +116,28 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 6: JSON POST /auth/login for every role; HS256 access tokens with
+  sub/iat/exp, configurable 30-minute expiry; bearer-protected GET /users/me.
+  Current user is read from PostgreSQL; credentials and hashes are not returned.
+- Added PyJWT 2.13.0. Required private JWT_SECRET in separate AuthSettings;
+  generated local ignored `.env` key without exposing it or replacing a supplied
+  nonempty key. Tests override the key. No migration required; head remains 0002.
+- Shared email normalization between registration/login. Wrong-password and
+  unknown-email responses are identical 401s; missing users still incur hash
+  verification. Tokens require the fixed algorithm and all three claims, and
+  reject malformed/out-of-range user IDs before querying PostgreSQL.
+- Preserved the repository's existing 8-character registration minimum, which
+  was present at milestone 6 start; updated stale README wording. Login accepts
+  1-128 characters and verifies exact password input.
+- Reused the rollback/savepoint API fixture via tests/conftest.py. New tests
+  cover all roles, case/whitespace normalization, safe profile responses, expiry,
+  wrong signature/algorithm, missing claims, malformed subjects, missing bearer,
+  changed/deleted users, invalid input, and indistinguishable credential errors.
+- No refresh tokens, token revocation/logout, rate limiting, or onboarding added.
+  User approved milestone 6 and requested its commit; no push requested.
+- Milestone 6 verification: 53 tests passed with only the existing 2 dependency
+  warnings; pip check passed; signing/verification with local JWT settings passed
+  without printing tokens or keys. Automated tests leave no accounts behind.
 - During milestone 5 review, removed the default `not integration` pytest filter
   and simplified VS Code pytest arguments to `tests`. All tests now run by
   default; use `-m "not integration"` explicitly for tests without PostgreSQL.
