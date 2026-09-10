@@ -1,8 +1,8 @@
 # Takeaway Service
 
-A take-home backend built one small milestone at a time. Currently exposes only
-`GET /health`, returning HTTP 200 with `{"status":"ok"}`. This checks application
-liveness, not database readiness.
+A take-home backend built one small milestone at a time. Exposes customer
+registration at `POST /auth/register` and `GET /health`, returning HTTP 200 with
+`{"status":"ok"}`. Health checks application liveness, not database readiness.
 
 ## Setup (Windows PowerShell)
 
@@ -38,6 +38,8 @@ Expected result: `status` is `ok`. Interactive API documentation is available at
 [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
 ## Test
+
+Start PostgreSQL and apply migrations before running all tests (see below).
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
@@ -148,9 +150,9 @@ encoding. Psycopg is the PostgreSQL driver; its binary package avoids local
 compiler setup on Windows.
 
 `app/db.py` creates one cached engine (a connection pool) when first needed.
-`get_session` provides a session for future FastAPI dependencies. The `with`
+`get_session` provides a session for FastAPI dependencies. The `with`
 block closes it even when a request fails, rolling back unfinished work. Features
-must commit successful writes explicitly. No endpoint uses a session yet.
+must commit successful writes explicitly. Registration uses this session.
 See [SQLAlchemy session basics](https://docs.sqlalchemy.org/en/20/orm/session_basics.html).
 
 With PostgreSQL running, apply migrations before running database tests:
@@ -160,16 +162,20 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `10 passed, 1 deselected`. Tests check connectivity and user-table
-constraints. User tests insert rows inside transactions and roll them back after
-each test. The default `pytest -q` command excludes integration tests; it still
-runs the health test without Docker. To run all tests:
+Expected: `29 passed, 1 deselected`. Tests check connectivity, user-table
+constraints, and registration. Tests insert rows inside transactions and roll them back after
+each test. The default `pytest -q` command runs all tests, including integration
+tests. VS Code can also discover and run individual tests without a marker override:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest -q -m "integration or not integration"
+.\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `11 passed` when PostgreSQL is running and migrations are applied.
+Expected: `30 passed` when PostgreSQL is running and migrations are applied.
+To run only tests that do not need Docker, use
+`python -m pytest -q -m "not integration"` with the virtual environment's Python.
+Registration tests use an outer transaction and session savepoints, so endpoint
+commits can be exercised without leaving test accounts in the database.
 
 Alembic records ordered schema changes as revision files in `migrations/versions`.
 It shares the application's settings and engine; credentials are not stored in
@@ -179,7 +185,7 @@ It shares the application's settings and engine; credentials are not stored in
 .\.venv\Scripts\python.exe -m alembic current -v
 ```
 
-Expected: revision `0001 (head)` after upgrading. `upgrade head` applies pending
+Expected: revision `0002 (head)` after upgrading. `upgrade head` applies pending
 migrations; running it again does not recreate the table. `alembic check` compares
 the database schema with the model and should report no new upgrade operations.
 `app.models` is imported in the migration environment to register model metadata.
@@ -194,18 +200,59 @@ email/password hash/role/name, and roles limited to `customer`, `staff`, `admin`
 `default_address` is optional. The role must be supplied explicitly.
 
 A CHECK constraint validates the role even for SQL written outside the app.
-The unique email constraint also creates an index, so no extra email index is
-needed. Email comparison is currently case-sensitive; normalization and email
-format validation will be decided for registration. Required text columns reject
-NULL, but do not yet reject empty strings. Password hashing is not implemented
-here; the model only stores the hash that registration will eventually generate.
+Migration `0002` replaces the exact-email unique constraint with a unique index
+on `lower(email)`. This prevents capitalization variants even for direct database
+writes, without changing existing addresses. If existing rows conflict, the
+migration fails transactionally rather than deleting or merging accounts.
+Required text columns reject NULL; registration also rejects empty names.
 
 The migration includes a downgrade that drops `users`, which would delete user
-data. Do not use downgrade on data you need to keep. No registration or login
-endpoint has been added in this milestone.
+data. Do not use downgrade on data you need to keep.
+
+## Customer registration
+
+Start PostgreSQL, apply migrations, and run Uvicorn using the commands above.
+In [the API docs](http://127.0.0.1:8000/docs), open `POST /auth/register` and try:
+
+```json
+{
+  "email": "Alice.Smith+takeaway@example.com",
+  "password": "a long example passphrase",
+  "name": "Alice Smith",
+  "default_address": "12 Example Street"
+}
+```
+
+This creates a real local customer. A successful response is HTTP 201 with the
+ID, normalized email, name, role `customer`, and address. No password, hash, or
+token is returned. The address may be omitted or null. Sending the same email
+again, including capitalization variants, returns HTTP 409.
+
+Rules:
+- Trim surrounding email whitespace, validate its format, then lowercase it.
+  Preserve dots and `+tags`; do not apply Gmail-specific alias rules.
+- Passwords are 15-128 characters and are never trimmed. No special-character
+  composition rules are imposed. Hashing uses Argon2id via `pwdlib`, with a fresh
+  salt for each password. See [FastAPI's hashing guide](https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/).
+- Names are trimmed and must be 1-200 characters; supplied addresses are trimmed
+  and must be 1-1,000 characters.
+- Unknown fields, including `role` and `password_hash`, return HTTP 422. The
+  server always assigns the customer role.
+- Validation errors return locations, messages, and error types, excluding raw
+  input values to avoid echoing passwords.
+
+`app/auth/schemas.py` validates requests and limits response fields;
+`service.py` hashes and inserts the customer, then commits. The unique database
+index decides duplicate conflicts, including competing inserts; only that
+specific violation is translated into HTTP 409. `router.py` maps this outcome
+to HTTP. Other database errors are not mislabeled as duplicate emails.
+
+Email format validation does not verify mailbox ownership. Verification emails,
+login, and JWT issuance are not part of this milestone. Login must use the same
+email normalization policy when implemented.
 
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Registration, authentication, and full deployment
+milestones, and review status. Login, JWT authentication, and full deployment
 belong to later milestones.

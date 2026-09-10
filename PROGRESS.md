@@ -6,13 +6,14 @@
 - Application milestone 1: accepted by the user on 2026-09-10.
 - Milestone 2: accepted by the user's request to proceed to the next milestone.
 - Milestone 3: explicitly accepted by the user.
-- Milestone 4: implemented and verified, awaiting user review.
-- Next step after acceptance and request: milestone 5 (customer registration).
+- Milestone 4: explicitly accepted by the user.
+- Milestone 5: explicitly accepted by the user; milestone commit requested.
+- Next step when requested: milestone 6 (login and JWT).
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
-  covering milestones 1-4 and project documentation. Milestone 4 remains awaiting
-  review; versioning does not imply acceptance. No remote or push configured.
+  covering milestones 1-4 and project documentation (commit `307daf4`).
+  No remote or push configured.
 - Future commits and pushes still require an explicit user request.
 
 ## Sources and scope
@@ -39,6 +40,9 @@ Core scope:
 ## Agreed decisions
 
 - Roles: `customer`, `staff`, and `admin`. All use the same login endpoint.
+- Email policy accepted by user: trim, validate format, lowercase; preserve dots
+  and plus tags. Apply consistently to registration and future login/recovery.
+  PostgreSQL enforces case-insensitive uniqueness with an index on lower(email).
 - Order creation must be atomic and idempotent. Persist a customer-scoped key
   and request fingerprint with the order. Repeating the same request returns
   the existing order; reusing the key with a different payload is a conflict.
@@ -55,8 +59,6 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Decisions to settle before affected work
 
-- Email normalization/case handling before registration; current database
-  uniqueness compares exact email values. Define request field validation then.
 - Currency, decimal precision, and rounding rules.
 - Staff account credential provisioning and initial admin command details.
 - Whether admins also receive operational staff permissions.
@@ -69,8 +71,8 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Milestones and acceptance criteria
 
-Milestones 1-3 are **accepted**; milestone 4 is **implemented, awaiting review**;
-milestones 5-21 are **not started**. Each is a separate review stop and includes relevant tests or
+Milestones 1-5 are **accepted**;
+milestones 6-21 are **not started**. Each is a separate review stop and includes relevant tests or
 operational verification.
 
 | # | Scope | Acceptance criteria |
@@ -113,6 +115,30 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- During milestone 5 review, removed the default `not integration` pytest filter
+  and simplified VS Code pytest arguments to `tests`. All tests now run by
+  default; use `-m "not integration"` explicitly for tests without PostgreSQL.
+  This supersedes earlier instructions about default test selection.
+- Milestone 5: added POST /auth/register with request/response schemas, service,
+  router, Argon2id hashing, server-assigned customer role, and named-constraint
+  duplicate handling (409). Reject extra fields (422), including role/hash.
+- Registration: normalized emails; passwords 15-128 characters, untrimmed; names
+  trimmed 1-200 characters; optional address trimmed 1-1000 characters. Validation
+  responses omit input values so password errors do not echo passwords.
+- Migration 0002 replaces unique(email) with unique lower(email). Existing values
+  are preserved; conflicting rows cause transactional failure, not data cleanup.
+- Added pwdlib 0.3.1 with Argon2 support and email-validator 2.3.0 dependencies.
+- Verification: migration applied, alembic check passed, current revision 0002;
+  30 tests passed with the existing 2 dependency warnings; pip check passed.
+  New tests cover normalized registration, stored hash verification, distinct
+  salts, duplicate/conflicting existing emails, recovery after conflict, invalid
+  and missing fields, forbidden roles/hash, and sanitized error responses.
+- Registration tests use savepoints under a rolled-back outer transaction;
+  no test accounts are retained. No live-server registration was performed.
+- No login/JWT, mailbox verification, or rate limiting added. PostgreSQL remains
+  running. User approved milestone 5 and requested its commit; no push requested.
+- Earlier milestone notes below describe their state at completion; milestone 5
+  supersedes earlier notes about missing registration and case-sensitive emails.
 - Milestone 4: added `User` in `app/models.py`, migration `0001_create_users.py`,
   model registration in Alembic, and 9 PostgreSQL user constraint test cases.
   Integer ID; required email/hash/role/name; optional default_address. Unique

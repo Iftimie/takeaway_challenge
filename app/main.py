@@ -1,6 +1,25 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+from app.auth.router import router as auth_router
 
 app = FastAPI(title="Takeaway Service")
+app.include_router(auth_router)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(
+    request: Request, error: RequestValidationError
+) -> JSONResponse:
+    # FastAPI's default errors include input values, which can contain passwords.
+    return JSONResponse(
+        status_code=422,
+        content={"detail": [
+            {key: item[key] for key in ("loc", "msg", "type")}
+            for item in error.errors()
+        ]},
+    )
 
 
 @app.get("/health")
