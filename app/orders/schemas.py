@@ -1,10 +1,16 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 PositiveId = Annotated[int, Field(strict=True, ge=1, le=2147483647)]
+
+
+class OrderStatusUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["pending", "accepted", "out_for_delivery", "delivered"]
 
 
 class OrderLineCreate(BaseModel):

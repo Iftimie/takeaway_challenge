@@ -1,7 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from queue import Queue
-from threading import Event
+from threading import Barrier, Event
 from time import monotonic, sleep
 from uuid import uuid4
 
@@ -12,7 +12,57 @@ from sqlalchemy.orm import Session
 from app.db import get_engine
 from app.models import MenuItem, Order, OrderItem, Restaurant, User
 from app.orders.schemas import OrderCreate
-from app.orders.service import OrderProblem, create_order
+from app.orders.service import OrderProblem, create_order, update_order_status
+
+
+@pytest.mark.parametrize("advance_again", [False, True])
+def test_status_update_does_not_overwrite_concurrent_change(purchase, advance_again):
+    engine, customer_id, _, data = purchase
+    with Session(engine) as session:
+        order, _ = create_order(session, customer_id, "status-test", data)
+
+    with engine.connect() as connection:
+        def competing_change(conn, cursor, statement, parameters, context, executemany):
+            if statement.startswith("UPDATE orders"):
+                # Another connection changes the row after our read, before our write.
+                with Session(engine) as competitor:
+                    update_order_status(competitor, data.restaurant_id, order.id, "accepted")
+                    if advance_again:
+                        update_order_status(competitor, data.restaurant_id, order.id, "out_for_delivery")
+
+        event.listen(connection, "before_cursor_execute", competing_change)
+        with Session(connection) as session:
+            if advance_again:
+                with pytest.raises(OrderProblem) as error:
+                    update_order_status(session, data.restaurant_id, order.id, "accepted")
+                assert error.value.status_code == 409
+            else:
+                assert update_order_status(session, data.restaurant_id, order.id, "accepted").status == "accepted"
+    with engine.connect() as connection:
+        assert connection.scalar(select(Order.status).where(Order.id == order.id)) == ("out_for_delivery" if advance_again else "accepted")
+
+
+def test_simultaneous_status_retries_succeed(purchase):
+    engine, customer_id, _, data = purchase
+    with Session(engine) as session:
+        order, _ = create_order(session, customer_id, "status-retries", data)
+    ready = Barrier(2)
+
+    def attempt():
+        with engine.connect() as connection:
+            def overlap_updates(conn, cursor, statement, parameters, context, executemany):
+                if statement.startswith("UPDATE orders"):
+                    ready.wait(timeout=5)
+            event.listen(connection, "before_cursor_execute", overlap_updates)
+            with Session(connection) as session:
+                return update_order_status(session, data.restaurant_id, order.id, "accepted")
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(attempt) for _ in range(2)]
+        results = [future.result(timeout=10) for future in futures]
+    assert [result.status for result in results] == ["accepted", "accepted"]
+    with engine.connect() as connection:
+        assert connection.scalar(select(Order.status).where(Order.id == order.id)) == "accepted"
 
 pytestmark = pytest.mark.integration
 

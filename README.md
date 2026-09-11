@@ -165,7 +165,7 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `331 passed, 6 deselected`. Tests check connectivity, user-table
+Expected: `366 passed, 6 deselected`. Tests check connectivity, user-table
 constraints, registration, authentication, admin provisioning, and restaurants.
 Most tests insert rows inside transactions and roll them back after
 each test. Order concurrency tests commit temporary records across connections
@@ -176,7 +176,7 @@ tests. VS Code can also discover and run individual tests without a marker overr
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `337 passed` when PostgreSQL is running and migrations are applied.
+Expected: `372 passed` when PostgreSQL is running and migrations are applied.
 To run only tests that do not need Docker, use
 `python -m pytest -q -m "not integration"` with the virtual environment's Python.
 Registration tests use an outer transaction and session savepoints, so endpoint
@@ -580,7 +580,7 @@ computes it and handles duplicate requests; the schema alone does not implement 
 Constraints reject invalid statuses, nonpositive amounts/quantities, blank
 delivery details, missing references, and non-EUR currency. Workflow checks for
 customer role, a nonempty order, matching restaurant items, and calculated totals
-are performed by order creation. Forward status transitions remain for a later milestone. Foreign keys
+are performed by order creation. Forward status transitions are enforced by the status endpoint below. Foreign keys
 prevent deleting referenced records; no cascading deletion is configured.
 Downgrading this migration deletes order tables and their data.
 
@@ -634,7 +634,7 @@ These are database transaction locks, released on commit or rollback.
 
 Missing/invalid authentication returns 401; staff/admins receive 403. A missing
 restaurant returns 404; missing or cross-restaurant items return 422; unavailable
-items return 409. Status-update endpoints are not implemented yet.
+items return 409. Assigned staff update status through the endpoint below.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/test_order_creation.py tests/test_order_concurrency.py -q
@@ -691,7 +691,7 @@ returns 404. An existing assigned restaurant with no orders returns `[]`.
 
 Pagination uses limit 1-100 (default 20) and offset 0-10,000 (default 0). Invalid
 IDs or pagination return 422. There are no status filters, total counts, or
-snapshot across pages. Status updates belong to the next milestone.
+snapshot across pages. Assigned staff can update status as described below.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/test_staff_orders.py -q
@@ -700,8 +700,42 @@ snapshot across pages. Status updates belong to the next milestone.
 Expected: `20 passed`, with PostgreSQL running. New tests roll back their data.
 No new dependencies or migrations are needed.
 
+## Order status updates
+
+Log in as assigned staff and authorize in `/docs`. Execute
+`PATCH /restaurants/{restaurant_id}/orders/{order_id}/status` with:
+
+```json
+{"status": "accepted"}
+```
+
+The sequence is `pending -> accepted -> out_for_delivery -> delivered`.
+Only one step forward is allowed. Requesting the current status returns 200
+without changing it; skipped steps or backward moves return 409. A successful
+response includes the full order. Customers see the new status through their
+order retrieval endpoints. No cancellation or transition-history feature is included.
+
+The service reads the status and issues a conditional UPDATE that succeeds only
+if the status still matches that read. It uses no SELECT FOR UPDATE. If another
+request wins, the service rereads the order: the same target status returns 200;
+a different status returns 409 so the caller can reload. PostgreSQL still takes
+its ordinary row lock when executing UPDATE. A delayed retry for a status the
+order has already passed returns 409, rather than moving it backward.
+
+Only the current assigned staff role is permitted. Missing/invalid authentication
+returns 401; customers/admins/unassigned staff receive 403. Missing or mismatched
+orders return 404. Unknown statuses, extra fields, and invalid IDs return 422.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_order_status.py tests/test_order_concurrency.py -k status -q
+```
+
+Expected: `35 passed, 5 deselected`. PostgreSQL must be running. Ordinary tests
+roll back their rows; concurrency tests commit temporary data and clean up only
+their own records. No new dependencies or migrations are needed.
+
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Status updates and full
+milestones, and review status. Application containerization and full
 deployment belong to later milestones.

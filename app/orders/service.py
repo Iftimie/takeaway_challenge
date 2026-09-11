@@ -2,7 +2,7 @@ import hashlib
 import json
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.models import MenuItem, Order, OrderItem, Restaurant, User
@@ -14,6 +14,30 @@ class OrderProblem(Exception):
         self.status_code = status_code
         self.detail = detail
         super().__init__(detail)
+
+
+def update_order_status(session: Session, restaurant_id: int, order_id: int, status: str) -> OrderResponse:
+    next_status = {"pending": "accepted", "accepted": "out_for_delivery", "out_for_delivery": "delivered"}
+    try:
+        order = session.scalar(select(Order).where(Order.id == order_id, Order.restaurant_id == restaurant_id))
+        if order is None:
+            raise OrderProblem(404, "Order not found")
+        if order.status != status:
+            if next_status.get(order.status) != status:
+                raise OrderProblem(409, "Invalid order status transition")
+            # Compare and update in one statement; never overwrite a newer status.
+            result = session.execute(update(Order).where(
+                Order.id == order_id, Order.restaurant_id == restaurant_id, Order.status == order.status,
+            ).values(status=status).execution_options(synchronize_session=False))
+            session.refresh(order)
+            if result.rowcount == 0 and order.status != status:
+                raise OrderProblem(409, "Order status changed; reload the order and retry")
+        response = order_response(session, order)
+        session.commit()
+        return response
+    except Exception:
+        session.rollback()
+        raise
 
 
 def request_fingerprint(data: OrderCreate) -> str:

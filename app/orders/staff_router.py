@@ -1,17 +1,30 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_session
 from app.auth.dependencies import require_assigned_staff
 from app.models import Order, OrderItem
-from app.orders.schemas import OrderResponse
-from app.orders.service import order_response
+from app.orders.schemas import OrderResponse, OrderStatusUpdate
+from app.orders.service import OrderProblem, order_response, update_order_status
 
 router = APIRouter(prefix="/restaurants/{restaurant_id}/orders", tags=["staff orders"],
                    dependencies=[Depends(require_assigned_staff)])
+
+
+@router.patch("/{order_id}/status", response_model=OrderResponse)
+def change_order_status(
+    restaurant_id: Annotated[int, Path(ge=1, le=2147483647)],
+    order_id: Annotated[int, Path(ge=1, le=2147483647)],
+    data: OrderStatusUpdate,
+    session: Annotated[Session, Depends(get_session)],
+) -> OrderResponse:
+    try:
+        return update_order_status(session, restaurant_id, order_id, data.status)
+    except OrderProblem as error:
+        raise HTTPException(error.status_code, error.detail) from None
 
 
 @router.get("", response_model=list[OrderResponse])

@@ -19,9 +19,9 @@
 - Milestone 14: explicitly accepted and committed (`7e2620a`).
 - Milestone 15: explicitly accepted and manually committed by user (`ee91a55`).
 - Milestone 16: explicitly accepted and manually committed by user (`f87b809`).
-- Milestone 17: explicitly accepted; user requested its commit.
-- Next step: milestone 18 (status transitions), authorized by the user.
-  Resolve repeated updates and concurrent transition handling before implementation.
+- Milestone 17: explicitly accepted and committed (`adec890`).
+- Milestone 18: explicitly accepted; user requested its commit.
+- Next step: milestone 19 (application container), authorized by the user.
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -64,6 +64,10 @@ Core scope:
   menu rows until commit. Earlier committed edits are used; later edits wait.
   A retry returns the stored order without repricing, even if the menu changed.
 - Order sequence: `pending -> accepted -> out_for_delivery -> delivered`.
+- Status updates: next step only; current status returns 200 without a change;
+  skipped/backward steps return 409. User requested no explicit row locking.
+  Conditional UPDATE checks the observed status; if a competing update wins,
+  return 200 if target is current, otherwise 409. No SELECT FOR UPDATE for statuses.
 - Use PostgreSQL `NUMERIC` and Python `Decimal` for money and server-calculated
   totals. User selected EUR, positive prices with at most two decimal places;
   API rejects excess precision rather than rounding. Menu prices use NUMERIC(10,2).
@@ -79,7 +83,6 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Decisions to settle before affected work
 
-- Repeated status-update behavior and concurrent transition handling.
 - Exact performance, metrics, and backup acceptance criteria. The PDF mentions
   p95 below 500 ms, contextual logs without PII, service metrics, and database
   snapshots, but workload and operational expectations are unspecified. Do not
@@ -88,7 +91,7 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 ## Milestones and acceptance criteria
 
 Milestones 1-17 are **accepted**;
-milestones 18-21 are **not started**.
+Milestone 18 is **accepted**; milestones 19-21 are **not started**.
 Each is a separate review stop and includes relevant tests or
 operational verification.
 
@@ -132,6 +135,20 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 18: assigned-staff PATCH /restaurants/{restaurant_id}/orders/{order_id}/status
+  accepts only a status field and returns full OrderResponse (200). Validates
+  current/next status; missing or mismatched order 404; invalid transitions 409;
+  invalid body/IDs 422. Existing staff dependency enforces current role/assignment.
+- Conditional UPDATE includes the observed status and restaurant ID. Zero updated
+  rows trigger a refresh: matching target succeeds, otherwise conflict. No explicit
+  order-row lock; PostgreSQL still uses normal UPDATE locks. No version column.
+- Verification: 372 tests passed (35 new), with 2 existing dependency warnings.
+  Includes all 16 current/target pairs, unchanged non-status data, customer readback,
+  access restrictions, invalid inputs, simultaneous same-target updates, and
+  separate-connection competing changes after read but before write.
+- No dependencies or migrations added; head remains 0006. No cancellation,
+  notifications, transition history, or custom lock timeout. User approved
+  milestone 18 and requested its commit; nothing pushed.
 - Milestone 17: GET /restaurants/{restaurant_id}/orders requires current staff
   role and restaurant assignment. Returns all customers' orders for only that
   restaurant, descending ID, with delivery details and purchased item snapshots.
