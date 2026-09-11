@@ -165,7 +165,7 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `206 passed, 6 deselected`. Tests check connectivity, user-table
+Expected: `244 passed, 6 deselected`. Tests check connectivity, user-table
 constraints, registration, authentication, admin provisioning, and restaurants.
 Tests insert rows inside transactions and roll them back after
 each test. The default `pytest -q` command runs all tests, including integration
@@ -175,7 +175,7 @@ tests. VS Code can also discover and run individual tests without a marker overr
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `212 passed` when PostgreSQL is running and migrations are applied.
+Expected: `250 passed` when PostgreSQL is running and migrations are applied.
 To run only tests that do not need Docker, use
 `python -m pytest -q -m "not integration"` with the virtual environment's Python.
 Registration tests use an outer transaction and session savepoints, so endpoint
@@ -189,7 +189,7 @@ It shares the application's settings and engine; credentials are not stored in
 .\.venv\Scripts\python.exe -m alembic current -v
 ```
 
-Expected: revision `0005 (head)` after upgrading. `upgrade head` applies pending
+Expected: revision `0006 (head)` after upgrading. `upgrade head` applies pending
 migrations; running it again does not recreate the table. `alembic check` compares
 the database schema with the model and should report no new upgrade operations.
 `app.models` is imported in the migration environment to register model metadata.
@@ -552,8 +552,39 @@ No migration or dependency changes are needed. There is no deletion endpoint
 or version check for competing edits; updates to the same field can overwrite
 one another. Menu edits during order creation will be addressed with that workflow.
 
+## Order persistence
+
+Milestone 14 adds database tables only. Apply the migration and run its tests:
+
+```powershell
+.\.venv\Scripts\python.exe -m alembic upgrade head
+.\.venv\Scripts\python.exe -m pytest tests/test_orders.py -q
+```
+
+Expected: revision `0006` applied and `38 passed`. PostgreSQL must be running.
+Tests roll back all inserted rows; no order endpoint exists yet.
+
+`orders` stores the customer and restaurant IDs, delivery name/address, status,
+EUR total, and a timezone-aware creation timestamp. Total uses NUMERIC(18,2)
+to allow sums larger than one item's NUMERIC(10,2) price. `order_items` stores
+the menu-item reference, purchased name/unit price, and quantity. These copies
+are snapshots: later menu or customer-profile changes do not alter old orders.
+Each menu item has at most one line per order; quantity represents multiple units.
+
+The idempotency key (up to 128 characters) is unique per customer, so different
+customers may use the same key. A 64-character lowercase hexadecimal fingerprint
+will store the SHA-256 digest of the normalized request. The next milestone will
+compute it and handle duplicate requests; the schema alone does not implement retries.
+
+Constraints reject invalid statuses, nonpositive amounts/quantities, blank
+delivery details, missing references, and non-EUR currency. Workflow checks for
+customer role, a nonempty order, matching restaurant items, calculated totals,
+and forward status transitions belong to subsequent milestones. Foreign keys
+prevent deleting referenced records; no cascading deletion is configured.
+Downgrading this migration deletes order tables and their data.
+
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Orders and full
+milestones, and review status. Order endpoints and full
 deployment belong to later milestones.

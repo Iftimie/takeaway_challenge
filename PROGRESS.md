@@ -15,8 +15,10 @@
 - Milestone 10: explicitly accepted and committed (`4d47e81`).
 - Milestone 11: explicitly accepted and committed (`4800f89`).
 - Milestone 12: explicitly accepted and committed (`04ebf47`).
-- Milestone 13: explicitly accepted; user requested its commit.
-- Next step: milestone 14 (order persistence), authorized by the user.
+- Milestone 13: explicitly accepted and committed (`cd836a3`).
+- Milestone 14: explicitly accepted; user requested its commit.
+- Next step: milestone 15 (order creation), authorized by the user.
+  Resolve menu edits concurrent with order creation before implementing it.
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -80,8 +82,7 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Milestones and acceptance criteria
 
-Milestones 1-13 are **accepted**;
-milestones 14-21 are **not started**.
+Milestones 1-14 are **accepted**; milestones 15-21 are **not started**.
 Each is a separate review stop and includes relevant tests or
 operational verification.
 
@@ -125,6 +126,21 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 14: Order/OrderItem models and migration 0006. Orders store customer,
+  restaurant, delivery-name/address snapshots, status, NUMERIC(18,2) total, EUR,
+  creation timestamp, customer-scoped idempotency key (128 chars), and a 64-char
+  lowercase hex request fingerprint for the future SHA-256 calculation.
+- Items store menu reference, name/unit-price snapshots, and positive quantity;
+  one row per order/menu pair. Foreign keys and CHECK/unique constraints enforced.
+- Verification: migration applied, alembic check passed; 250 tests passed (38 new)
+  with 2 existing dependency warnings. Tests cover snapshots surviving changes,
+  key scope, required fields, valid statuses, invalid amounts and references.
+  Test rows roll back. No new dependencies or HTTP endpoints.
+- Schema alone does not enforce customer role, nonempty orders, item/restaurant
+  agreement, total=sum(items), or forward-only transitions. These are workflow
+  responsibilities in later milestones. No fingerprint generation or retry
+  handling yet. No cascading deletes; downgrade deletes order data and was not
+  run on the user's database. User approved milestone 14 and requested its commit.
 - Milestone 13: PATCH /restaurants/{restaurant_id}/menu-items/{item_id} updates
   supplied name/price/available fields only. Same validation as creation; empty
   requests, explicit nulls, and extra fields return 422. Returns full item (200).
