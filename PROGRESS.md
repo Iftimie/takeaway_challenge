@@ -14,8 +14,9 @@
 - Milestone 9: explicitly accepted and committed (`e06de46`).
 - Milestone 10: explicitly accepted and committed (`4d47e81`).
 - Milestone 11: explicitly accepted and committed (`4800f89`).
-- Milestone 12: explicitly accepted; user requested its commit.
-- Next step: milestone 13 (menu updates), authorized by the user.
+- Milestone 12: explicitly accepted and committed (`04ebf47`).
+- Milestone 13: explicitly accepted; user requested its commit.
+- Next step: milestone 14 (order persistence), authorized by the user.
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -79,7 +80,8 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Milestones and acceptance criteria
 
-Milestones 1-12 are **accepted**; milestones 13-21 are **not started**.
+Milestones 1-13 are **accepted**;
+milestones 14-21 are **not started**.
 Each is a separate review stop and includes relevant tests or
 operational verification.
 
@@ -123,6 +125,19 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 13: PATCH /restaurants/{restaurant_id}/menu-items/{item_id} updates
+  supplied name/price/available fields only. Same validation as creation; empty
+  requests, explicit nulls, and extra fields return 422. Returns full item (200).
+- Creation and updates share require_assigned_staff in the menu router. Current
+  role/assignment required; missing or mismatched item returns 404. Restaurant ID
+  and item ID are both used in the lookup, preventing cross-restaurant edits.
+- Verification: 212 tests passed (36 new), with 2 existing dependency warnings.
+  Tests cover partial updates, public readback, unchanged omitted fields, invalid
+  requests without writes, current permissions, mismatched/missing items and IDs.
+- No migrations or dependencies added; schema head remains 0005. No deletion or
+  optimistic concurrency/version checks; competing edits to the same field may
+  overwrite one another. Coordination with order creation remains undecided for
+  the order workflow. User approved milestone 13 and requested its commit.
 - Milestone 12: public GET /restaurants/{restaurant_id}/menu-items returns only
   that restaurant's items, ordered by ID, including unavailable items. Uses the
   existing response schema (decimal-string EUR price and availability).

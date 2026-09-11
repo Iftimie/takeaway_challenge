@@ -165,7 +165,7 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `170 passed, 6 deselected`. Tests check connectivity, user-table
+Expected: `206 passed, 6 deselected`. Tests check connectivity, user-table
 constraints, registration, authentication, admin provisioning, and restaurants.
 Tests insert rows inside transactions and roll them back after
 each test. The default `pytest -q` command runs all tests, including integration
@@ -175,7 +175,7 @@ tests. VS Code can also discover and run individual tests without a marker overr
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `176 passed` when PostgreSQL is running and migrations are applied.
+Expected: `212 passed` when PostgreSQL is running and migrations are applied.
 To run only tests that do not need Docker, use
 `python -m pytest -q -m "not integration"` with the virtual environment's Python.
 Registration tests use an outer transaction and session savepoints, so endpoint
@@ -492,7 +492,7 @@ missing restaurant returns 404. Role and assignment are checked on each request.
 ```
 
 Expected: `36 passed`, with PostgreSQL running. Tests roll back their data.
-Menu editing is reserved for the next milestone.
+Assigned staff can edit menu items using the endpoint below.
 
 ## Menu browsing
 
@@ -519,8 +519,41 @@ return 422. There is no total count or snapshot preserved between requests.
 Expected: `18 passed`. Tests roll back their data. No new migration or dependency
 is required for this milestone.
 
+## Menu updates
+
+Log in as staff assigned to the restaurant. In `/docs`, execute
+`PATCH /restaurants/{restaurant_id}/menu-items/{item_id}` using IDs from the
+public menu. Supply only fields you want to change, for example:
+
+```json
+{
+  "price": "7.25",
+  "available": false
+}
+```
+
+Expected: 200 with the complete updated item. Its name stays unchanged.
+`name`, `price`, and `available` follow the creation rules. Omitted fields retain
+their values; an empty object, explicit null, or extra field returns 422.
+An invalid field rejects the whole request without applying other changes.
+
+Both creation and updates use the same current-role and assignment check.
+Customers/admins/unassigned staff receive 403; missing/invalid authentication
+returns 401. A missing item or an item belonging to another restaurant returns
+404 after authorization. Invalid IDs return 422. The restaurant cannot be
+changed through this endpoint. Updated items appear in public menu browsing.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_menu_updates.py -q
+```
+
+Expected: `36 passed`, with PostgreSQL running. Tests roll back their data.
+No migration or dependency changes are needed. There is no deletion endpoint
+or version check for competing edits; updates to the same field can overwrite
+one another. Menu edits during order creation will be addressed with that workflow.
+
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Menu updates, orders, and full
+milestones, and review status. Orders and full
 deployment belong to later milestones.
