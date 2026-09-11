@@ -16,9 +16,9 @@
 - Milestone 11: explicitly accepted and committed (`4800f89`).
 - Milestone 12: explicitly accepted and committed (`04ebf47`).
 - Milestone 13: explicitly accepted and committed (`cd836a3`).
-- Milestone 14: explicitly accepted; user requested its commit.
-- Next step: milestone 15 (order creation), authorized by the user.
-  Resolve menu edits concurrent with order creation before implementing it.
+- Milestone 14: explicitly accepted and committed (`7e2620a`).
+- Milestone 15: implemented and verified; awaiting review.
+- Next step after approval and request to proceed: milestone 16 (customer order retrieval).
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -57,6 +57,9 @@ Core scope:
 - Order creation must be atomic and idempotent. Persist a customer-scoped key
   and request fingerprint with the order. Repeating the same request returns
   the existing order; reusing the key with a different payload is a conflict.
+- User agreed: checkout uses current database price/availability and locks selected
+  menu rows until commit. Earlier committed edits are used; later edits wait.
+  A retry returns the stored order without repricing, even if the menu changed.
 - Order sequence: `pending -> accepted -> out_for_delivery -> delivered`.
 - Use PostgreSQL `NUMERIC` and Python `Decimal` for money and server-calculated
   totals. User selected EUR, positive prices with at most two decimal places;
@@ -74,7 +77,6 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 ## Decisions to settle before affected work
 
 - Repeated status-update behavior and concurrent transition handling.
-- Menu edits concurrent with order creation.
 - Exact performance, metrics, and backup acceptance criteria. The PDF mentions
   p95 below 500 ms, contextual logs without PII, service metrics, and database
   snapshots, but workload and operational expectations are unspecified. Do not
@@ -82,7 +84,8 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Milestones and acceptance criteria
 
-Milestones 1-14 are **accepted**; milestones 15-21 are **not started**.
+Milestones 1-14 are **accepted**; milestone 15 is **awaiting review**;
+milestones 16-21 are **not started**.
 Each is a separate review stop and includes relevant tests or
 operational verification.
 
@@ -126,6 +129,26 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 15: customer-only POST /orders requires Idempotency-Key (1-128 ASCII
+  letters/digits/underscore/hyphen), restaurant ID, explicit delivery name/address,
+  and 1-100 distinct item IDs with integer quantities 1-100. No client price/total.
+- Service locks customer row before key lookup, then selected menu rows in ID
+  order. Computes Decimal total, snapshots item names/prices, creates pending
+  EUR order/items and commits together. Any error rolls back. New order returns
+  201; same normalized request/key returns existing order (200); different request
+  returns 409. Item ordering and trimmed delivery whitespace do not affect hash.
+- Missing restaurant returns 404; missing/cross-restaurant items 422; unavailable
+  items 409. Failed requests do not retain the key. Role is refreshed under lock.
+- Verification: 293 tests passed (43 new), with 2 existing dependency warnings.
+  Includes separate-connection overlapping retries/conflicts, both menu-lock
+  orderings, rollback after simulated item-write failure, snapshots, key scope,
+  authorization, and validation. Concurrency tests commit temporary fixture data
+  and delete only those records afterward; other tests roll back.
+- No dependencies or migration added; head remains 0006. Requests from the same
+  customer are serialized, and overlapping carts can wait on menu locks. No
+  custom lock timeout/retry policy. No order read/list endpoints, status updates,
+  online payment, or price confirmation flow. Current price can differ from the
+  browsing price, as accepted. Milestone 15 uncommitted for review; nothing pushed.
 - Milestone 14: Order/OrderItem models and migration 0006. Orders store customer,
   restaurant, delivery-name/address snapshots, status, NUMERIC(18,2) total, EUR,
   creation timestamp, customer-scoped idempotency key (128 chars), and a 64-char

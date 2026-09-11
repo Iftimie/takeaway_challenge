@@ -165,17 +165,18 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `244 passed, 6 deselected`. Tests check connectivity, user-table
+Expected: `287 passed, 6 deselected`. Tests check connectivity, user-table
 constraints, registration, authentication, admin provisioning, and restaurants.
-Tests insert rows inside transactions and roll them back after
-each test. The default `pytest -q` command runs all tests, including integration
+Most tests insert rows inside transactions and roll them back after
+each test. Order concurrency tests commit temporary records across connections
+and delete only their own records afterward. The default `pytest -q` command runs all tests, including integration
 tests. VS Code can also discover and run individual tests without a marker override:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `250 passed` when PostgreSQL is running and migrations are applied.
+Expected: `293 passed` when PostgreSQL is running and migrations are applied.
 To run only tests that do not need Docker, use
 `python -m pytest -q -m "not integration"` with the virtual environment's Python.
 Registration tests use an outer transaction and session savepoints, so endpoint
@@ -550,7 +551,7 @@ changed through this endpoint. Updated items appear in public menu browsing.
 Expected: `36 passed`, with PostgreSQL running. Tests roll back their data.
 No migration or dependency changes are needed. There is no deletion endpoint
 or version check for competing edits; updates to the same field can overwrite
-one another. Menu edits during order creation will be addressed with that workflow.
+one another. Order creation locks selected menu rows until its transaction finishes.
 
 ## Order persistence
 
@@ -562,7 +563,7 @@ Milestone 14 adds database tables only. Apply the migration and run its tests:
 ```
 
 Expected: revision `0006` applied and `38 passed`. PostgreSQL must be running.
-Tests roll back all inserted rows; no order endpoint exists yet.
+These persistence tests roll back all inserted rows.
 
 `orders` stores the customer and restaurant IDs, delivery name/address, status,
 EUR total, and a timezone-aware creation timestamp. Total uses NUMERIC(18,2)
@@ -573,18 +574,80 @@ Each menu item has at most one line per order; quantity represents multiple unit
 
 The idempotency key (up to 128 characters) is unique per customer, so different
 customers may use the same key. A 64-character lowercase hexadecimal fingerprint
-will store the SHA-256 digest of the normalized request. The next milestone will
-compute it and handle duplicate requests; the schema alone does not implement retries.
+stores the SHA-256 digest of the normalized request. The creation service below
+computes it and handles duplicate requests; the schema alone does not implement retries.
 
 Constraints reject invalid statuses, nonpositive amounts/quantities, blank
 delivery details, missing references, and non-EUR currency. Workflow checks for
-customer role, a nonempty order, matching restaurant items, calculated totals,
-and forward status transitions belong to subsequent milestones. Foreign keys
+customer role, a nonempty order, matching restaurant items, and calculated totals
+are performed by order creation. Forward status transitions remain for a later milestone. Foreign keys
 prevent deleting referenced records; no cascading deletion is configured.
 Downgrading this migration deletes order tables and their data.
+
+## Order creation
+
+Log in as a customer and authorize in `/docs`. Execute `POST /orders` with a new
+`Idempotency-Key` header (for example, a UUID) and the following body, replacing
+restaurant and item IDs with IDs from your menu:
+
+```json
+{
+  "restaurant_id": 1,
+  "delivery_name": "Alice",
+  "delivery_address": "12 Example Street",
+  "items": [
+    {"menu_item_id": 1, "quantity": 2}
+  ]
+}
+```
+
+Expected: 201 with the order ID, restaurant, delivery details, pending status,
+EUR total, creation time, and purchased item snapshots. This creates a real
+local order. All prices are decimal strings in the response. Payment remains
+on delivery; no payment processing occurs.
+
+Supply delivery details explicitly; the profile's default address is not copied
+automatically. Names/addresses are trimmed with the same 200/1,000-character
+limits used elsewhere. Include 1-100 distinct menu items, each with an integer
+quantity from 1-100. Unknown fields, including prices, totals, customer ID, and
+status, are rejected. The server verifies restaurant membership and availability,
+calculates the total, and saves the order and all lines in one transaction.
+
+The key accepts 1-128 ASCII letters, digits, underscores, or hyphens. Keep the
+same key and body when retrying a request whose result is uncertain:
+
+- Same customer/key/request: 200 with the existing order; no second purchase.
+- Same customer/key with a different request: 409 conflict.
+- New key: a new purchase, even for the same body.
+- Failed validation or transaction: no order or key reservation remains.
+
+The request fingerprint includes normalized delivery details, restaurant, and
+item IDs/quantities. Reordering item lines or trimming delivery whitespace does
+not change it. Retries use stored prices even after menu prices or availability
+change. Keys are scoped to the authenticated customer and retained with the order.
+
+Checkout uses current database prices, which can differ from the browsing price.
+The service locks the customer row to serialize that customer's requests, then
+locks menu rows in ID order. A staff edit that finishes first is reflected in
+checkout; an edit after checkout takes the lock waits until the order finishes.
+These are database transaction locks, released on commit or rollback.
+
+Missing/invalid authentication returns 401; staff/admins receive 403. A missing
+restaurant returns 404; missing or cross-restaurant items return 422; unavailable
+items return 409. There are no order retrieval or status-update endpoints yet.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_order_creation.py tests/test_order_concurrency.py -q
+```
+
+Expected: `43 passed`, with PostgreSQL running and migration 0006 applied.
+Concurrency tests use separate connections and observe actual PostgreSQL lock
+waits. They commit temporary test records, then clean up only those records.
+Other order-creation tests roll back their data. No new dependency or migration
+is required. Requests can wait on locks; no custom lock timeout is configured.
 
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Order endpoints and full
+milestones, and review status. Order retrieval/status endpoints and full
 deployment belong to later milestones.
