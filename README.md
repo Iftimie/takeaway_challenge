@@ -165,7 +165,7 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `116 passed, 6 deselected`. Tests check connectivity, user-table
+Expected: `152 passed, 6 deselected`. Tests check connectivity, user-table
 constraints, registration, authentication, admin provisioning, and restaurants.
 Tests insert rows inside transactions and roll them back after
 each test. The default `pytest -q` command runs all tests, including integration
@@ -175,7 +175,7 @@ tests. VS Code can also discover and run individual tests without a marker overr
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `122 passed` when PostgreSQL is running and migrations are applied.
+Expected: `158 passed` when PostgreSQL is running and migrations are applied.
 To run only tests that do not need Docker, use
 `python -m pytest -q -m "not integration"` with the virtual environment's Python.
 Registration tests use an outer transaction and session savepoints, so endpoint
@@ -189,7 +189,7 @@ It shares the application's settings and engine; credentials are not stored in
 .\.venv\Scripts\python.exe -m alembic current -v
 ```
 
-Expected: revision `0004 (head)` after upgrading. `upgrade head` applies pending
+Expected: revision `0005 (head)` after upgrading. `upgrade head` applies pending
 migrations; running it again does not recreate the table. `alembic check` compares
 the database schema with the model and should report no new upgrade operations.
 `app.models` is imported in the migration environment to register model metadata.
@@ -450,8 +450,52 @@ Expected: `29 passed`. PostgreSQL must be running. Tests cover creation/login,
 password hashing, duplicate emails, authorization, validation, assignments, and
 database constraints. Test rows are rolled back.
 
+## Menu item creation
+
+Apply migration `0005` with the virtual environment's Python:
+
+```powershell
+.\.venv\Scripts\python.exe -m alembic upgrade head
+```
+
+Create a staff account and assign it to a restaurant as described above. Log in
+as that staff member and authorize in `/docs`. Execute
+`POST /restaurants/{restaurant_id}/menu-items` with the assigned restaurant ID:
+
+```json
+{
+  "name": "Tomato soup",
+  "price": "6.50",
+  "available": true
+}
+```
+
+Expected: 201 with `id`, `restaurant_id`, trimmed `name`, `price: "6.50"`,
+`available: true`, and `currency: "EUR"`. This creates a real local menu item.
+Availability defaults to true if omitted and accepts JSON booleans only.
+
+Prices must be positive and at most 99,999,999.99 EUR, with at most two decimal
+places. Send prices as decimal strings to preserve their exact value; JSON
+numbers are also accepted. Python Decimal and PostgreSQL NUMERIC(10,2) store
+decimal values exactly. The API rejects excess fractional precision instead of
+rounding; direct SQL writes to NUMERIC can still round to its declared scale.
+Trailing zeros do not change the price's precision (for example, 6.500 is 6.50).
+
+Names must contain 1-200 characters after trimming. Invalid prices, names, IDs,
+or extra fields return 422. The restaurant ID comes from the URL; currency is
+fixed by the platform. Missing/invalid authentication returns 401. Customers,
+admins, and staff without an assignment receive 403. A staff request for a
+missing restaurant returns 404. Role and assignment are checked on each request.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_menu_creation.py -q
+```
+
+Expected: `36 passed`, with PostgreSQL running. Tests roll back their data.
+Menu browsing and editing are reserved for the next milestones.
+
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Menus, orders, and full
+milestones, and review status. Menu browsing/updates, orders, and full
 deployment belong to later milestones.

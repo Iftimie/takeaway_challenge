@@ -12,9 +12,9 @@
 - Milestone 7: explicitly accepted and committed (`c1d0dc2`).
 - Milestone 8: explicitly accepted and committed (`668c6ca`).
 - Milestone 9: explicitly accepted and committed (`e06de46`).
-- Milestone 10: explicitly accepted; user requested its commit.
-- Next step: milestone 11 (menu creation), authorized by the user.
-  Settle currency/precision and admin operational permissions before that work.
+- Milestone 10: explicitly accepted and committed (`4d47e81`).
+- Milestone 11: explicitly accepted; user requested its commit.
+- Next step: milestone 12 (public menu browsing), authorized by the user.
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -54,8 +54,11 @@ Core scope:
   and request fingerprint with the order. Repeating the same request returns
   the existing order; reusing the key with a different payload is a conflict.
 - Order sequence: `pending -> accepted -> out_for_delivery -> delivered`.
-- Use PostgreSQL `NUMERIC` and Python `Decimal` for money, one currency, and
-  server-calculated totals. The currency still needs selection.
+- Use PostgreSQL `NUMERIC` and Python `Decimal` for money and server-calculated
+  totals. User selected EUR, positive prices with at most two decimal places;
+  API rejects excess precision rather than rounding. Menu prices use NUMERIC(10,2).
+- Only assigned staff perform restaurant operations; admins retain onboarding
+  permissions and cannot create menu items.
 - Preserve item-name and unit-price snapshots in orders. Initially manage menu
   changes through edits and availability; no menu deletion endpoint is planned.
 - Create files only when their milestones need them.
@@ -66,8 +69,6 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Decisions to settle before affected work
 
-- Currency, decimal precision, and rounding rules.
-- Whether admins also receive operational staff permissions.
 - Repeated status-update behavior and concurrent transition handling.
 - Menu edits concurrent with order creation.
 - Exact performance, metrics, and backup acceptance criteria. The PDF mentions
@@ -77,7 +78,8 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Milestones and acceptance criteria
 
-Milestones 1-10 are **accepted**; milestones 11-21 are **not started**.
+Milestones 1-11 are **accepted**;
+milestones 12-21 are **not started**.
 Each is a separate review stop and includes relevant tests or
 operational verification.
 
@@ -121,6 +123,20 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 11: POST /restaurants/{restaurant_id}/menu-items requires the current
+  staff role and assignment. Creates name, EUR price, and availability (default
+  true). Returns 201 with ID/restaurant ID/name/price/available/currency.
+- Migration 0005 creates menu_items with restaurant foreign key, required fields,
+  NUMERIC(10,2) price and positive/range check. API accepts 0.01-99,999,999.99,
+  rejects excess fractional precision, trims names (1-200), rejects extra fields.
+  Response prices are decimal strings with two places; currency is fixed EUR.
+- Verification: 158 tests passed (36 new), with 2 existing dependency warnings;
+  migration applied and alembic check passed. Tests roll back rows. No dependencies
+  added. No browsing, editing, or deletion in this milestone.
+- Database NUMERIC scale rounds excess precision in direct SQL; API validation
+  rejects it before insertion. No concurrent role/assignment mutation API exists;
+  authorization checks current state when the request is handled.
+- User approved milestone 11 and requested its commit; nothing pushed.
 - Milestone 10: admin-only POST /staff accepts email/name/initial password and
   always creates staff. Normalizes email/name and hashes the password; duplicate
   email returns 409 without modifying the existing account. Staff can log in.
