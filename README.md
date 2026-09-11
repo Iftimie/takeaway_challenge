@@ -165,7 +165,7 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `87 passed, 6 deselected`. Tests check connectivity, user-table
+Expected: `116 passed, 6 deselected`. Tests check connectivity, user-table
 constraints, registration, authentication, admin provisioning, and restaurants.
 Tests insert rows inside transactions and roll them back after
 each test. The default `pytest -q` command runs all tests, including integration
@@ -175,7 +175,7 @@ tests. VS Code can also discover and run individual tests without a marker overr
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `93 passed` when PostgreSQL is running and migrations are applied.
+Expected: `122 passed` when PostgreSQL is running and migrations are applied.
 To run only tests that do not need Docker, use
 `python -m pytest -q -m "not integration"` with the virtual environment's Python.
 Registration tests use an outer transaction and session savepoints, so endpoint
@@ -189,7 +189,7 @@ It shares the application's settings and engine; credentials are not stored in
 .\.venv\Scripts\python.exe -m alembic current -v
 ```
 
-Expected: revision `0003 (head)` after upgrading. `upgrade head` applies pending
+Expected: revision `0004 (head)` after upgrading. `upgrade head` applies pending
 migrations; running it again does not recreate the table. `alembic check` compares
 the database schema with the model and should report no new upgrade operations.
 `app.models` is imported in the migration environment to register model metadata.
@@ -287,8 +287,8 @@ It never includes the password hash. In `/docs`, execute `/auth/login`, copy onl
 the access token into **Authorize**, and then execute `/users/me`.
 
 All three roles use the same login route. Public registration still creates
-customers only; initial admins use the command below and staff onboarding remains
-for a later milestone. Login
+customers only; initial admins use the command below and admins create staff
+through `POST /staff`. Login
 checks the password exactly as supplied (1-128 characters), rather than applying
 the registration minimum to existing passwords. Invalid credentials return the
 same HTTP 401 message for an unknown email or wrong password. Unknown emails
@@ -405,8 +405,53 @@ are not included. No new migration or dependency is needed.
 Expected: `17 passed`. Tests cover public access, ordering, pagination bounds,
 empty pages, detail responses, and invalid or missing IDs. Test rows roll back.
 
+## Staff onboarding and assignment
+
+Apply migration `0004` with the virtual environment's Python:
+
+```powershell
+.\.venv\Scripts\python.exe -m alembic upgrade head
+```
+
+Log in as an admin and authorize in `/docs`. Execute `POST /staff` with:
+
+```json
+{
+  "email": "staff@example.com",
+  "name": "Kitchen Staff",
+  "password": "a long initial passphrase"
+}
+```
+
+Expected: 201 with the new user's ID, normalized email/name, role `staff`, and
+null default address. The password is hashed and never returned. The admin
+supplies and communicates this initial password; the staff member uses it at
+`POST /auth/login`. There is no invitation or password-change flow yet.
+
+Email and password rules match registration. Extra fields (including `role`)
+are rejected with 422. Existing emails return 409 without changing that account.
+
+Use the returned ID and an existing restaurant ID with
+`POST /staff/{staff_id}/restaurants/{restaurant_id}` (no request body).
+Expected: 201 with `staff_id` and `restaurant_id`. Each staff member may have
+multiple restaurants, and each restaurant may have multiple staff. A composite
+primary key makes each pair unique, so repeating an assignment returns 409.
+Foreign keys ensure both referenced records exist; the API checks the staff role.
+
+Missing records return 404, assigning a customer or admin returns 409, and
+invalid IDs return 422. Both endpoints return 401 without valid authentication
+and 403 for customers/staff. Assignment removal and staff listing are not included.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_staff.py -q
+```
+
+Expected: `29 passed`. PostgreSQL must be running. Tests cover creation/login,
+password hashing, duplicate emails, authorization, validation, assignments, and
+database constraints. Test rows are rolled back.
+
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Staff onboarding, menus, orders, and full
+milestones, and review status. Menus, orders, and full
 deployment belong to later milestones.

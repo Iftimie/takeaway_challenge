@@ -11,9 +11,10 @@
 - Milestone 6: explicitly accepted and committed (`b8e0cc3`).
 - Milestone 7: explicitly accepted and committed (`c1d0dc2`).
 - Milestone 8: explicitly accepted and committed (`668c6ca`).
-- Milestone 9: explicitly accepted; user requested its commit.
-- Next step: milestone 10 (staff onboarding
-  and assignment); settle credential provisioning before implementation.
+- Milestone 9: explicitly accepted and committed (`e06de46`).
+- Milestone 10: explicitly accepted; user requested its commit.
+- Next step: milestone 11 (menu creation), authorized by the user.
+  Settle currency/precision and admin operational permissions before that work.
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -45,6 +46,7 @@ Core scope:
 ## Agreed decisions
 
 - Roles: `customer`, `staff`, and `admin`. All use the same login endpoint.
+- Admin supplies the initial staff password; use existing password rules and hashing.
 - Email policy accepted by user: trim, validate format, lowercase; preserve dots
   and plus tags. Apply consistently to registration and future login/recovery.
   PostgreSQL enforces case-insensitive uniqueness with an index on lower(email).
@@ -65,7 +67,6 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 ## Decisions to settle before affected work
 
 - Currency, decimal precision, and rounding rules.
-- Staff account credential provisioning.
 - Whether admins also receive operational staff permissions.
 - Repeated status-update behavior and concurrent transition handling.
 - Menu edits concurrent with order creation.
@@ -76,8 +77,8 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Milestones and acceptance criteria
 
-Milestones 1-9 are **accepted**;
-milestones 10-21 are **not started**. Each is a separate review stop and includes relevant tests or
+Milestones 1-10 are **accepted**; milestones 11-21 are **not started**.
+Each is a separate review stop and includes relevant tests or
 operational verification.
 
 | # | Scope | Acceptance criteria |
@@ -120,6 +121,20 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 10: admin-only POST /staff accepts email/name/initial password and
+  always creates staff. Normalizes email/name and hashes the password; duplicate
+  email returns 409 without modifying the existing account. Staff can log in.
+- POST /staff/{staff_id}/restaurants/{restaurant_id} creates an assignment (201).
+  Missing records return 404, non-staff targets and duplicate pairs return 409,
+  invalid IDs return 422. Both endpoints require current admin authorization.
+- Migration 0004 adds a composite primary key and foreign keys for assignments.
+  Multiple staff per restaurant and multiple restaurants per staff are supported.
+  The API checks staff role; foreign keys enforce existence, not user role.
+- Verification: migration applied; alembic check passed; 122 tests passed
+  (29 new) with 2 existing dependency warnings. Tests roll back their data.
+- No dependencies added. No password change/reset, invitation delivery, assignment
+  removal, or staff listing included. Admin must communicate the initial password
+  outside the API. User approved milestone 10 and requested its commit; no push.
 - Milestone 9: public GET /restaurants and GET /restaurants/{restaurant_id}.
   Responses contain ID/name/address. List orders by ascending ID, defaults to
   limit 20/offset 0, bounds limit to 1-100 and offset to 0-10,000. Empty pages
