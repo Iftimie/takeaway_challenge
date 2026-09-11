@@ -165,7 +165,7 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `152 passed, 6 deselected`. Tests check connectivity, user-table
+Expected: `170 passed, 6 deselected`. Tests check connectivity, user-table
 constraints, registration, authentication, admin provisioning, and restaurants.
 Tests insert rows inside transactions and roll them back after
 each test. The default `pytest -q` command runs all tests, including integration
@@ -175,7 +175,7 @@ tests. VS Code can also discover and run individual tests without a marker overr
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `158 passed` when PostgreSQL is running and migrations are applied.
+Expected: `176 passed` when PostgreSQL is running and migrations are applied.
 To run only tests that do not need Docker, use
 `python -m pytest -q -m "not integration"` with the virtual environment's Python.
 Registration tests use an outer transaction and session savepoints, so endpoint
@@ -492,10 +492,35 @@ missing restaurant returns 404. Role and assignment are checked on each request.
 ```
 
 Expected: `36 passed`, with PostgreSQL running. Tests roll back their data.
-Menu browsing and editing are reserved for the next milestones.
+Menu editing is reserved for the next milestone.
+
+## Menu browsing
+
+With PostgreSQL and Uvicorn running, replace `1` with an existing restaurant ID:
+
+```powershell
+Invoke-RestMethod 'http://127.0.0.1:8000/restaurants/1/menu-items?limit=20&offset=0'
+```
+
+No login is needed. The response is an array of that restaurant's items, ordered
+by ascending item ID. Each item includes `id`, `restaurant_id`, `name`, `price`
+as a decimal string, `currency: "EUR"`, and `available`. Unavailable items remain
+visible with `available: false`.
+
+Pagination matches restaurant browsing: `limit` defaults to 20 (range 1-100),
+and `offset` defaults to 0 (range 0-10,000). Empty menus and pages beyond the
+available rows return `[]`. A missing restaurant returns 404; invalid parameters
+return 422. There is no total count or snapshot preserved between requests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_menu_browsing.py -q
+```
+
+Expected: `18 passed`. Tests roll back their data. No new migration or dependency
+is required for this milestone.
 
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Menu browsing/updates, orders, and full
+milestones, and review status. Menu updates, orders, and full
 deployment belong to later milestones.

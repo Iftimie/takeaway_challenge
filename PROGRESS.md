@@ -13,8 +13,9 @@
 - Milestone 8: explicitly accepted and committed (`668c6ca`).
 - Milestone 9: explicitly accepted and committed (`e06de46`).
 - Milestone 10: explicitly accepted and committed (`4d47e81`).
-- Milestone 11: explicitly accepted; user requested its commit.
-- Next step: milestone 12 (public menu browsing), authorized by the user.
+- Milestone 11: explicitly accepted and committed (`4800f89`).
+- Milestone 12: explicitly accepted; user requested its commit.
+- Next step: milestone 13 (menu updates), authorized by the user.
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -78,8 +79,7 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Milestones and acceptance criteria
 
-Milestones 1-11 are **accepted**;
-milestones 12-21 are **not started**.
+Milestones 1-12 are **accepted**; milestones 13-21 are **not started**.
 Each is a separate review stop and includes relevant tests or
 operational verification.
 
@@ -123,6 +123,17 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 12: public GET /restaurants/{restaurant_id}/menu-items returns only
+  that restaurant's items, ordered by ID, including unavailable items. Uses the
+  existing response schema (decimal-string EUR price and availability).
+- Pagination matches restaurants: limit 1-100 (default 20), offset 0-10,000
+  (default 0). Empty pages return []; missing restaurant returns 404; invalid
+  IDs/pagination return 422. No total counts or snapshot between pages.
+- Verification: 176 tests passed (18 new), with 2 existing dependency warnings.
+  Tests cover restaurant isolation, public access, response fields, pagination,
+  empty/missing restaurants, and invalid inputs. Test rows roll back.
+- No dependencies or migration added; schema head remains 0005. No menu editing
+  or detail endpoint added. User approved milestone 12 and requested its commit.
 - Milestone 11: POST /restaurants/{restaurant_id}/menu-items requires the current
   staff role and assignment. Creates name, EUR price, and availability (default
   true). Returns 201 with ID/restaurant ID/name/price/available/currency.
