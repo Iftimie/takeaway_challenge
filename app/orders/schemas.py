@@ -49,3 +49,14 @@ class OrderResponse(BaseModel):
     currency: str
     created_at: datetime
     items: list[OrderLineResponse]
+
+
+class OrderSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    restaurant_id: int
+    status: str
+    total: Decimal
+    currency: str
+    created_at: datetime

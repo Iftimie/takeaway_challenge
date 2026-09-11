@@ -17,8 +17,9 @@
 - Milestone 12: explicitly accepted and committed (`04ebf47`).
 - Milestone 13: explicitly accepted and committed (`cd836a3`).
 - Milestone 14: explicitly accepted and committed (`7e2620a`).
-- Milestone 15: implemented and verified; awaiting review.
-- Next step after approval and request to proceed: milestone 16 (customer order retrieval).
+- Milestone 15: explicitly accepted and manually committed by user (`ee91a55`).
+- Milestone 16: implemented and verified; awaiting review.
+- Next step after approval and request to proceed: milestone 17 (staff order listing).
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -84,8 +85,8 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Milestones and acceptance criteria
 
-Milestones 1-14 are **accepted**; milestone 15 is **awaiting review**;
-milestones 16-21 are **not started**.
+Milestones 1-15 are **accepted**; milestone 16 is **awaiting review**;
+milestones 17-21 are **not started**.
 Each is a separate review stop and includes relevant tests or
 operational verification.
 
@@ -129,6 +130,18 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 16: customer-only GET /orders lists summaries scoped to the signed-in
+  customer, descending ID, with limit 1-100 (default 20) and offset 0-10,000
+  (default 0). GET /orders/{order_id} returns the existing full response including
+  delivery details and item snapshots. Missing and other-customer orders both 404.
+- Current role checked: staff/admin 403, missing/invalid token 401. Invalid IDs
+  and pagination 422. Summary excludes delivery details/items and internal keys.
+- Verification: 317 tests passed (24 new), with 2 existing dependency warnings.
+  Tests cover isolation, current status/snapshots, pagination and bounds, empty
+  pages, missing orders, and current-role changes. New test data rolls back.
+- No migration or dependency added; schema head remains 0006. No total counts,
+  filters, staff access, or status updates. Offset pages do not preserve a snapshot.
+  Milestone 16 remains uncommitted for review; nothing committed or pushed by agent.
 - Milestone 15: customer-only POST /orders requires Idempotency-Key (1-128 ASCII
   letters/digits/underscore/hyphen), restaurant ID, explicit delivery name/address,
   and 1-100 distinct item IDs with integer quantities 1-100. No client price/total.

@@ -165,7 +165,7 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `287 passed, 6 deselected`. Tests check connectivity, user-table
+Expected: `311 passed, 6 deselected`. Tests check connectivity, user-table
 constraints, registration, authentication, admin provisioning, and restaurants.
 Most tests insert rows inside transactions and roll them back after
 each test. Order concurrency tests commit temporary records across connections
@@ -176,7 +176,7 @@ tests. VS Code can also discover and run individual tests without a marker overr
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `293 passed` when PostgreSQL is running and migrations are applied.
+Expected: `317 passed` when PostgreSQL is running and migrations are applied.
 To run only tests that do not need Docker, use
 `python -m pytest -q -m "not integration"` with the virtual environment's Python.
 Registration tests use an outer transaction and session savepoints, so endpoint
@@ -634,7 +634,7 @@ These are database transaction locks, released on commit or rollback.
 
 Missing/invalid authentication returns 401; staff/admins receive 403. A missing
 restaurant returns 404; missing or cross-restaurant items return 422; unavailable
-items return 409. There are no order retrieval or status-update endpoints yet.
+items return 409. Status-update endpoints are not implemented yet.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/test_order_creation.py tests/test_order_concurrency.py -q
@@ -646,8 +646,36 @@ waits. They commit temporary test records, then clean up only those records.
 Other order-creation tests roll back their data. No new dependency or migration
 is required. Requests can wait on locks; no custom lock timeout is configured.
 
+## Customer order retrieval
+
+Log in as a customer and authorize in `/docs`:
+
+- `GET /orders?limit=20&offset=0` lists only your orders, newest ID first. Each
+  summary includes `id`, `restaurant_id`, `status`, `total`, `currency`, and
+  `created_at`. Delivery details and item lines are returned by the detail route.
+- `GET /orders/{order_id}` returns your order with delivery details and purchased
+  item snapshots, using the same response format as creation. Later menu changes
+  do not alter the purchased names/prices; status reflects the stored order status.
+
+Pagination uses limit 1-100 (default 20) and offset 0-10,000 (default 0). Empty
+history or a page beyond available orders returns `[]`. There is no total count
+or snapshot between requests; newly created orders can shift subsequent pages.
+
+A missing order or another customer's order returns the same 404 response:
+`{"detail":"Order not found"}`. Missing/invalid authentication returns 401;
+staff and admins receive 403. The current database role is checked on each request.
+Invalid order IDs or pagination values return 422. Internal idempotency keys and
+request fingerprints are never included in these responses.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_order_retrieval.py -q
+```
+
+Expected: `24 passed`, with PostgreSQL running. Tests roll back their data.
+No new migration or dependency is needed.
+
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Order retrieval/status endpoints and full
+milestones, and review status. Staff order listing, status updates, and full
 deployment belong to later milestones.
