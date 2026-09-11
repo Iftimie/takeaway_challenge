@@ -19,3 +19,11 @@ class User(Base):
             "role IN ('customer', 'staff', 'admin')", name="ck_users_role"
         ),
     )
+
+
+class Restaurant(Base):
+    __tablename__ = "restaurants"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(200))
+    address: Mapped[str] = mapped_column(String(1000))

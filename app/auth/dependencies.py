@@ -31,3 +31,9 @@ def get_current_user(
     if user is None:
         raise unauthorized
     return user
+
+
+def require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user

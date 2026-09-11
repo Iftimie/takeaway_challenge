@@ -2,7 +2,8 @@
 
 A take-home backend built one small milestone at a time. Exposes customer
 registration at `POST /auth/register`, login at `POST /auth/login`, and the
-protected profile at `GET /users/me`. `GET /health` returns HTTP 200 with
+protected profile at `GET /users/me`, and admin-only `POST /restaurants`.
+`GET /health` returns HTTP 200 with
 `{"status":"ok"}` and checks application liveness, not database readiness.
 
 ## Setup (Windows PowerShell)
@@ -163,7 +164,7 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `56 passed, 6 deselected`. Tests check connectivity, user-table
+Expected: `70 passed, 6 deselected`. Tests check connectivity, user-table
 constraints, registration, and authentication. Tests insert rows inside transactions and roll them back after
 each test. The default `pytest -q` command runs all tests, including integration
 tests. VS Code can also discover and run individual tests without a marker override:
@@ -172,7 +173,7 @@ tests. VS Code can also discover and run individual tests without a marker overr
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `62 passed` when PostgreSQL is running and migrations are applied.
+Expected: `76 passed` when PostgreSQL is running and migrations are applied.
 To run only tests that do not need Docker, use
 `python -m pytest -q -m "not integration"` with the virtual environment's Python.
 Registration tests use an outer transaction and session savepoints, so endpoint
@@ -186,7 +187,7 @@ It shares the application's settings and engine; credentials are not stored in
 .\.venv\Scripts\python.exe -m alembic current -v
 ```
 
-Expected: revision `0002 (head)` after upgrading. `upgrade head` applies pending
+Expected: revision `0003 (head)` after upgrading. `upgrade head` applies pending
 migrations; running it again does not recreate the table. `alembic check` compares
 the database schema with the model and should report no new upgrade operations.
 `app.models` is imported in the migration environment to register model metadata.
@@ -335,8 +336,44 @@ To test this milestone alone:
 
 Expected: `9 passed`. Database tests roll back their admin accounts afterward.
 
+## Restaurant creation
+
+Apply migration `0003` with `python -m alembic upgrade head` using the virtual
+environment. It creates `restaurants` with an integer ID, required name, and
+required address. Names need not be unique because branches can share a name.
+
+Create an admin using the command above, log in, and authorize in `/docs`.
+Then execute `POST /restaurants` with:
+
+```json
+{
+  "name": "Test Kitchen",
+  "address": "12 Example Street"
+}
+```
+
+Expected: HTTP 201 with the generated `id`, `name`, and `address`. This persists
+a real restaurant. Names and addresses are trimmed and must contain 1-200 and
+1-1,000 characters respectively. Missing, blank, oversized, or extra fields
+return HTTP 422. IDs are assigned by PostgreSQL, not accepted from the client.
+
+Missing/invalid authentication returns 401. Authenticated customers and staff
+receive 403. `require_admin` checks the current database role on each request.
+Authentication establishes who the user is; authorization checks whether that
+user may perform this action. The route performs one insert and commit, so it
+does not need a separate service layer yet.
+
+Run the milestone's tests with:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_restaurants.py -q
+```
+
+Expected: `14 passed`. Tests roll back their data. Restaurant browsing, staff
+assignment, editing, and deletion are not included in this milestone.
+
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Restaurant management and full deployment
+milestones, and review status. Restaurant browsing and full deployment
 belong to later milestones.

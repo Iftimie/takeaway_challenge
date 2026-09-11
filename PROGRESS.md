@@ -9,8 +9,9 @@
 - Milestone 4: explicitly accepted by the user.
 - Milestone 5: explicitly accepted and committed (`5bdb865`).
 - Milestone 6: explicitly accepted and committed (`b8e0cc3`).
-- Milestone 7: explicitly accepted; user requested its commit.
-- Next step: milestone 8 (restaurant creation), authorized by the user.
+- Milestone 7: explicitly accepted and committed (`c1d0dc2`).
+- Milestone 8: explicitly accepted; user requested its commit.
+- Next step: milestone 9 (restaurant browsing), authorized by the user.
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -73,8 +74,8 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Milestones and acceptance criteria
 
-Milestones 1-7 are **accepted**;
-milestones 8-21 are **not started**. Each is a separate review stop and includes relevant tests or
+Milestones 1-8 are **accepted**;
+milestones 9-21 are **not started**. Each is a separate review stop and includes relevant tests or
 operational verification.
 
 | # | Scope | Acceptance criteria |
@@ -117,6 +118,16 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 8: Restaurant model and migration 0003; admin-only POST /restaurants;
+  shared require_admin dependency; request/response schemas. Returns 201 with
+  ID/name/address. API trims text; name 1-200, address 1-1000; rejects extra fields.
+- Names are not unique (branches may share a name). Database requires both fields.
+  No browsing, assignments, editing, deletion, or new dependencies added.
+- Verification: migration applied, alembic check reports no schema drift;
+  76 tests passed (14 new) with existing 2 dependency warnings. Tests cover
+  persistence, normalization, non-admin/missing/invalid authentication, updated
+  database roles, and invalid input without writes. Test rows are rolled back.
+- User approved milestone 8 and requested its commit. No push requested.
 - Milestone 7: added `python -m app.create_admin --email ... --name ...` with
   hidden password and confirmation prompts. Reuses registration validation and
   Argon2 hashing, assigns admin explicitly, commits only a new account. Duplicate
