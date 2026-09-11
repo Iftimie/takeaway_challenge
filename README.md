@@ -165,7 +165,7 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `311 passed, 6 deselected`. Tests check connectivity, user-table
+Expected: `331 passed, 6 deselected`. Tests check connectivity, user-table
 constraints, registration, authentication, admin provisioning, and restaurants.
 Most tests insert rows inside transactions and roll them back after
 each test. Order concurrency tests commit temporary records across connections
@@ -176,7 +176,7 @@ tests. VS Code can also discover and run individual tests without a marker overr
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `317 passed` when PostgreSQL is running and migrations are applied.
+Expected: `337 passed` when PostgreSQL is running and migrations are applied.
 To run only tests that do not need Docker, use
 `python -m pytest -q -m "not integration"` with the virtual environment's Python.
 Registration tests use an outer transaction and session savepoints, so endpoint
@@ -674,8 +674,34 @@ request fingerprints are never included in these responses.
 Expected: `24 passed`, with PostgreSQL running. Tests roll back their data.
 No new migration or dependency is needed.
 
+## Staff order listing
+
+Log in as staff assigned to a restaurant and authorize in `/docs`. Execute
+`GET /restaurants/{restaurant_id}/orders?limit=20&offset=0` with that restaurant ID.
+
+Expected: 200 with a JSON array of that restaurant's orders from all customers,
+newest ID first. Each order includes delivery name/address, current status,
+EUR total, creation time, and purchased item snapshots. Internal idempotency keys
+and fingerprints are excluded. Item lines are fetched in one batch for the page.
+
+The current staff role and assignment are checked using the same dependency as
+menu writes. Missing/invalid authentication returns 401; customers, admins, and
+staff without an assignment receive 403. A staff request for a missing restaurant
+returns 404. An existing assigned restaurant with no orders returns `[]`.
+
+Pagination uses limit 1-100 (default 20) and offset 0-10,000 (default 0). Invalid
+IDs or pagination return 422. There are no status filters, total counts, or
+snapshot across pages. Status updates belong to the next milestone.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_staff_orders.py -q
+```
+
+Expected: `20 passed`, with PostgreSQL running. New tests roll back their data.
+No new dependencies or migrations are needed.
+
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Staff order listing, status updates, and full
+milestones, and review status. Status updates and full
 deployment belong to later milestones.

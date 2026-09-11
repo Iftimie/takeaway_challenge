@@ -24,8 +24,9 @@ def request_fingerprint(data: OrderCreate) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
-def order_response(session: Session, order: Order) -> OrderResponse:
-    lines = session.scalars(select(OrderItem).where(OrderItem.order_id == order.id).order_by(OrderItem.menu_item_id))
+def order_response(session: Session, order: Order, lines: list[OrderItem] | None = None) -> OrderResponse:
+    if lines is None:
+        lines = list(session.scalars(select(OrderItem).where(OrderItem.order_id == order.id).order_by(OrderItem.menu_item_id)))
     return OrderResponse(
         id=order.id, restaurant_id=order.restaurant_id,
         delivery_name=order.delivery_name, delivery_address=order.delivery_address,

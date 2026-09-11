@@ -1,13 +1,13 @@
 from typing import Annotated
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Path
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import InvalidTokenError
 from sqlalchemy.orm import Session
 
 from app.auth.tokens import decode_user_id
 from app.db import get_session
-from app.models import User
+from app.models import Restaurant, StaffAssignment, User
 
 bearer = HTTPBearer(auto_error=False)
 
@@ -37,3 +37,16 @@ def require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
     if user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
+
+
+def require_assigned_staff(
+    restaurant_id: Annotated[int, Path(ge=1, le=2147483647)],
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+) -> None:
+    if user.role != "staff":
+        raise HTTPException(403, "Assigned staff access required")
+    if session.get(Restaurant, restaurant_id) is None:
+        raise HTTPException(404, "Restaurant not found")
+    if session.get(StaffAssignment, (user.id, restaurant_id)) is None:
+        raise HTTPException(403, "Assigned staff access required")

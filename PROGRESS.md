@@ -18,8 +18,10 @@
 - Milestone 13: explicitly accepted and committed (`cd836a3`).
 - Milestone 14: explicitly accepted and committed (`7e2620a`).
 - Milestone 15: explicitly accepted and manually committed by user (`ee91a55`).
-- Milestone 16: implemented and verified; awaiting review.
-- Next step after approval and request to proceed: milestone 17 (staff order listing).
+- Milestone 16: explicitly accepted and manually committed by user (`f87b809`).
+- Milestone 17: explicitly accepted; user requested its commit.
+- Next step: milestone 18 (status transitions), authorized by the user.
+  Resolve repeated updates and concurrent transition handling before implementation.
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -85,8 +87,8 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Milestones and acceptance criteria
 
-Milestones 1-15 are **accepted**; milestone 16 is **awaiting review**;
-milestones 17-21 are **not started**.
+Milestones 1-17 are **accepted**;
+milestones 18-21 are **not started**.
 Each is a separate review stop and includes relevant tests or
 operational verification.
 
@@ -130,6 +132,19 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 17: GET /restaurants/{restaurant_id}/orders requires current staff
+  role and restaurant assignment. Returns all customers' orders for only that
+  restaurant, descending ID, with delivery details and purchased item snapshots.
+  Pagination: limit 1-100 (default 20), offset 0-10,000 (default 0).
+- Moved require_assigned_staff to auth/dependencies.py for menu and order reuse.
+  Item rows fetched once per page; existing order response helper accepts those
+  prefetched lines. No per-order item query on staff lists. No internal keys returned.
+- Verification: 337 tests passed (20 new), with 2 existing dependency warnings.
+  Tests cover restaurant isolation, multiple customers, snapshots/status, pagination,
+  empty pages, current role/assignment restrictions, and invalid parameters.
+- No dependency or migration changes; schema head remains 0006. No status filters,
+  total counts, separate staff detail endpoint, or status updates. Pagination has
+  no snapshot across requests. User approved milestone 17 and requested its commit.
 - Milestone 16: customer-only GET /orders lists summaries scoped to the signed-in
   customer, descending ID, with limit 1-100 (default 20) and offset 0-10,000
   (default 0). GET /orders/{order_id} returns the existing full response including
