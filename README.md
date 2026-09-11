@@ -163,7 +163,7 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `52 passed, 1 deselected`. Tests check connectivity, user-table
+Expected: `56 passed, 6 deselected`. Tests check connectivity, user-table
 constraints, registration, and authentication. Tests insert rows inside transactions and roll them back after
 each test. The default `pytest -q` command runs all tests, including integration
 tests. VS Code can also discover and run individual tests without a marker override:
@@ -172,7 +172,7 @@ tests. VS Code can also discover and run individual tests without a marker overr
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `53 passed` when PostgreSQL is running and migrations are applied.
+Expected: `62 passed` when PostgreSQL is running and migrations are applied.
 To run only tests that do not need Docker, use
 `python -m pytest -q -m "not integration"` with the virtual environment's Python.
 Registration tests use an outer transaction and session savepoints, so endpoint
@@ -284,7 +284,8 @@ It never includes the password hash. In `/docs`, execute `/auth/login`, copy onl
 the access token into **Authorize**, and then execute `/users/me`.
 
 All three roles use the same login route. Public registration still creates
-customers only; staff/admin onboarding remains for later milestones. Login
+customers only; initial admins use the command below and staff onboarding remains
+for a later milestone. Login
 checks the password exactly as supplied (1-128 characters), rather than applying
 the registration minimum to existing passwords. Invalid credentials return the
 same HTTP 401 message for an unknown email or wrong password. Unknown emails
@@ -301,8 +302,41 @@ No refresh tokens, logout/revocation mechanism, or rate limiting are included.
 An access token remains usable until it expires, the signing key changes, or
 the user is deleted. Automated login tests use their own key and roll back data.
 
+## Initial admin provisioning
+
+From a trusted local PowerShell terminal, with PostgreSQL running and migrations
+applied:
+
+```powershell
+.\.venv\Scripts\python.exe -m app.create_admin --email admin@example.com --name "Local Admin"
+```
+
+Enter a password and confirm it when prompted. Input is hidden; the command has
+no password argument. It refuses to fall back to visible input if the terminal
+cannot hide it. Use VS Code's terminal rather than its Debug Console.
+
+The command reuses registration's email/name/password validation and Argon2
+hashing, but assigns `admin` internally. It prints the created ID and exits with
+code 0 on success. The account can then log in at `/auth/login`. This is a real
+database write; no permanent admin was created during automated verification.
+
+An existing email, including capitalization variants, causes a controlled error
+and exit code 1. The existing account's role, name, and password are preserved.
+There is no promotion, password reset, or public admin registration endpoint.
+The command can provision another admin with a different email; it is restricted
+by access to this trusted environment and its database credentials, not by an
+HTTP login. No new dependencies or schema migration are needed.
+
+To test this milestone alone:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_create_admin.py -q
+```
+
+Expected: `9 passed`. Database tests roll back their admin accounts afterward.
+
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Admin provisioning and full deployment
+milestones, and review status. Restaurant management and full deployment
 belong to later milestones.

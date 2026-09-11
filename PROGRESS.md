@@ -8,8 +8,9 @@
 - Milestone 3: explicitly accepted by the user.
 - Milestone 4: explicitly accepted by the user.
 - Milestone 5: explicitly accepted and committed (`5bdb865`).
-- Milestone 6: explicitly accepted by the user; milestone commit requested.
-- Next step when requested: milestone 7 (initial admin provisioning).
+- Milestone 6: explicitly accepted and committed (`b8e0cc3`).
+- Milestone 7: explicitly accepted; user requested its commit.
+- Next step: milestone 8 (restaurant creation), authorized by the user.
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -61,7 +62,7 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 ## Decisions to settle before affected work
 
 - Currency, decimal precision, and rounding rules.
-- Staff account credential provisioning and initial admin command details.
+- Staff account credential provisioning.
 - Whether admins also receive operational staff permissions.
 - Repeated status-update behavior and concurrent transition handling.
 - Menu edits concurrent with order creation.
@@ -72,8 +73,8 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Milestones and acceptance criteria
 
-Milestones 1-6 are **accepted**;
-milestones 7-21 are **not started**. Each is a separate review stop and includes relevant tests or
+Milestones 1-7 are **accepted**;
+milestones 8-21 are **not started**. Each is a separate review stop and includes relevant tests or
 operational verification.
 
 | # | Scope | Acceptance criteria |
@@ -116,6 +117,20 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 7: added `python -m app.create_admin --email ... --name ...` with
+  hidden password and confirmation prompts. Reuses registration validation and
+  Argon2 hashing, assigns admin explicitly, commits only a new account. Duplicate
+  email errors never promote or overwrite existing users, regardless of role.
+- Controlled validation, duplicate, database, and cancelled-input errors exit 1;
+  success prints only the new ID and exits 0. No password argument; visible-input
+  fallback is refused. Access is through a trusted terminal/database environment.
+- Verification: 62 tests passed (9 new), with existing 2 dependency warnings;
+  module `--help` works. New tests cover command success and admin login, duplicate
+  emails for all roles, invalid input before opening the DB, and hidden-input
+  failure. Tests roll back accounts; no permanent admin was created.
+- No dependencies, migration, HTTP endpoint, or account-promotion feature added.
+  Distinct emails can provision multiple admins. User requested milestone 7 commit;
+  no push requested.
 - Milestone 6: JSON POST /auth/login for every role; HS256 access tokens with
   sub/iat/exp, configurable 30-minute expiry; bearer-protected GET /users/me.
   Current user is read from PostgreSQL; credentials and hashes are not returned.
