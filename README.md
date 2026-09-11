@@ -3,6 +3,7 @@
 A take-home backend built one small milestone at a time. Exposes customer
 registration at `POST /auth/register`, login at `POST /auth/login`, and the
 protected profile at `GET /users/me`, and admin-only `POST /restaurants`.
+Public restaurant browsing uses `GET /restaurants` and `GET /restaurants/{id}`.
 `GET /health` returns HTTP 200 with
 `{"status":"ok"}` and checks application liveness, not database readiness.
 
@@ -164,8 +165,9 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `70 passed, 6 deselected`. Tests check connectivity, user-table
-constraints, registration, and authentication. Tests insert rows inside transactions and roll them back after
+Expected: `87 passed, 6 deselected`. Tests check connectivity, user-table
+constraints, registration, authentication, admin provisioning, and restaurants.
+Tests insert rows inside transactions and roll them back after
 each test. The default `pytest -q` command runs all tests, including integration
 tests. VS Code can also discover and run individual tests without a marker override:
 
@@ -173,7 +175,7 @@ tests. VS Code can also discover and run individual tests without a marker overr
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `76 passed` when PostgreSQL is running and migrations are applied.
+Expected: `93 passed` when PostgreSQL is running and migrations are applied.
 To run only tests that do not need Docker, use
 `python -m pytest -q -m "not integration"` with the virtual environment's Python.
 Registration tests use an outer transaction and session savepoints, so endpoint
@@ -369,11 +371,42 @@ Run the milestone's tests with:
 .\.venv\Scripts\python.exe -m pytest tests/test_restaurants.py -q
 ```
 
-Expected: `14 passed`. Tests roll back their data. Restaurant browsing, staff
-assignment, editing, and deletion are not included in this milestone.
+Expected: `14 passed`. Tests roll back their data. Staff assignment, editing,
+and deletion are not included in this milestone.
+
+## Restaurant browsing
+
+With PostgreSQL and Uvicorn running, no login is needed:
+
+```powershell
+Invoke-RestMethod 'http://127.0.0.1:8000/restaurants?limit=20&offset=0'
+Invoke-RestMethod http://127.0.0.1:8000/restaurants/1
+```
+
+The list returns a JSON array of restaurants containing `id`, `name`, and
+`address`, ordered by ascending ID. `limit` defaults to 20 and accepts 1-100;
+`offset` defaults to 0 and accepts 0-10,000. Offset means how many rows to skip.
+An empty database or a page beyond available rows returns `[]`. Invalid
+pagination values return HTTP 422.
+
+The detail endpoint returns one restaurant, or HTTP 404 with
+`{"detail":"Restaurant not found"}` if the ID does not exist. Replace `1` above
+with an ID from your list. IDs outside the positive PostgreSQL integer range
+return HTTP 422.
+
+Pagination does not include a total count or preserve a snapshot between
+requests; changes to the restaurant list can shift later pages. Menus and search
+are not included. No new migration or dependency is needed.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_restaurant_browsing.py -q
+```
+
+Expected: `17 passed`. Tests cover public access, ordering, pagination bounds,
+empty pages, detail responses, and invalid or missing IDs. Test rows roll back.
 
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Restaurant browsing and full deployment
-belong to later milestones.
+milestones, and review status. Staff onboarding, menus, orders, and full
+deployment belong to later milestones.

@@ -10,8 +10,10 @@
 - Milestone 5: explicitly accepted and committed (`5bdb865`).
 - Milestone 6: explicitly accepted and committed (`b8e0cc3`).
 - Milestone 7: explicitly accepted and committed (`c1d0dc2`).
-- Milestone 8: explicitly accepted; user requested its commit.
-- Next step: milestone 9 (restaurant browsing), authorized by the user.
+- Milestone 8: explicitly accepted and committed (`668c6ca`).
+- Milestone 9: explicitly accepted; user requested its commit.
+- Next step: milestone 10 (staff onboarding
+  and assignment); settle credential provisioning before implementation.
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -74,8 +76,8 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Milestones and acceptance criteria
 
-Milestones 1-8 are **accepted**;
-milestones 9-21 are **not started**. Each is a separate review stop and includes relevant tests or
+Milestones 1-9 are **accepted**;
+milestones 10-21 are **not started**. Each is a separate review stop and includes relevant tests or
 operational verification.
 
 | # | Scope | Acceptance criteria |
@@ -118,6 +120,16 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 9: public GET /restaurants and GET /restaurants/{restaurant_id}.
+  Responses contain ID/name/address. List orders by ascending ID, defaults to
+  limit 20/offset 0, bounds limit to 1-100 and offset to 0-10,000. Empty pages
+  return []; missing restaurants return 404; invalid parameters return 422.
+- Verification: 93 tests passed (17 new), with the existing 2 dependency
+  warnings. Tests cover public reads, ordering, pagination, empty pages, and
+  invalid/missing IDs. Test data rolls back. No migration or dependency added;
+  schema head remains 0003. No menus, search, total counts, or snapshot pagination.
+- User approved milestone 9 and requested its commit and milestone 10.
+  Staff credential provisioning remains undecided before implementation.
 - Milestone 8: Restaurant model and migration 0003; admin-only POST /restaurants;
   shared require_admin dependency; request/response schemas. Returns 201 with
   ID/name/address. API trims text; name 1-200, address 1-1000; rejects extra fields.
