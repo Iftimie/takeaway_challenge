@@ -2,14 +2,10 @@
 
 ## Resume here
 
-- Status: D1-D6 accepted. D7 QA infrastructure verified locally. Fix branch:
-  codex/fix-lightsail-key-names. Local testing caught both the resource-name collision
-  and Lightsail executing cloud-config as shell; fixed with distinct key names and
-  a shell bootstrap. Final create/repeat applies passed; repeat had zero changes.
-  QA is running at 16.171.112.133; Docker/Compose/deploy SSH and firewall verified.
-  User requested push/new PR, then user-managed merge and production approval.
-  Wait for the user at those manual steps; no GitHub run polling unless requested.
-  Only qa/prod environments and their existing IAM users are used.
+- Status: D1-D7 accepted. D8 implemented, awaiting review. QA application deployment
+  uses deploy/compose.yaml and deploy/deploy.sh, with first-run server-generated
+  secrets and explicit migrations. No Terraform changes: access stays through SSH
+  until D9 HTTPS. Production application deployment is not started.
 - Current design: [DEVOPS_DESIGN.md](DEVOPS_DESIGN.md). Region: `eu-north-1`.
   Repository: https://github.com/Iftimie/takeaway_challenge.
   D2 committed/pushed in 74bf7dc; user confirmed CI passed and waived the deliberate
@@ -84,8 +80,8 @@ of D1 and does not authorize creating AWS resources.
 | D4 | Bootstrap encrypted/versioned S3 state and locking; document deletion. | Review plan/cost and authorize first resource creation. | Remote state and locking work; state excluded from Git. | Accepted; committed f3bb61f, not pushed |
 | D5 | Configure GitHub QA/prod environments, branch restrictions and approval gate. | Iftimie approver confirmed; complete restricted GitHub settings. | QA can proceed; prod waits for explicit approval; allow Iftimie self-approval. | Accepted by user; committed/pushed 75ba1c3 |
 | D6 | Publish commit-identified Docker images to public GHCR; document retention/cleanup. | Trigger/push approved workflow; set package visibility if needed. | Passing build publishes a recorded digest; anonymous image pull works. | Accepted by user; committed/pushed 43c67dd |
-| D7 | Reusable Lightsail Terraform, QA networking, Docker bootstrap and SSH deployment access. | Review plan/cost; generate/store SSH private key securely. | QA server starts; deployment access works; database not public. | In progress: plan ready; awaiting server creation approval |
-| D8 | Deploy QA Compose stack, migrations, secrets and explicit sample-data setup. | Supply QA secrets/admin credentials securely. | QA works; app redeploy preserves DB; seeding is separate. | Not started |
+| D7 | Reusable Lightsail Terraform, QA networking, Docker bootstrap and SSH deployment access. | Review plan/cost; generate/store SSH private key securely. | QA server starts; deployment access works; database not public. | Accepted by user; QA/prod bootstrap, SSH, Docker and firewall passed; production plan has no changes |
+| D8 | Deploy QA Compose stack, migrations, secrets and explicit sample-data setup. | Supply QA secrets/admin credentials securely. | QA works; app redeploy preserves DB; seeding is separate. | Implemented, awaiting review |
 | D9 | IP-certificate issuance/renewal and HTTPS configuration. | Certificate contact email if needed. | Trusted QA HTTPS and verified renewal procedure. | Not started |
 | D10 | Automatic QA deployment after successful CI, smoke checks and deployment serialization. | Merge/push approved change. | Tested image deployed to QA; clear failure/success result. | Not started |
 | D11 | Separate prod instance/database/secrets; promote QA image after approval. | Set prod secrets; approve first deployment. | Isolated prod, identical approved digest, HTTPS/smoke checks pass. | Not started |
@@ -111,6 +107,27 @@ of D1 and does not authorize creating AWS resources.
 - Backend dependency ranges are not fully locked; review reproducibility in CI.
 
 ## Latest verification
+
+- D8: isolated local Compose test passed fresh migrations, HTTP health, app
+  replacement and login with the preserved account; test volume/containers removed.
+  Live QA script ran successfully twice. Health/UI and preserved-account login
+  passed after redeploy. One randomly credentialed verification customer remains
+  in QA; no sample reset or admin creation was performed. Secrets generated on
+  QA with restrictive permissions, never printed. Image digest:
+  ghcr.io/iftimie/takeaway_challenge@sha256:71752f9f48eee8d9b622065bec83d352d847dbfcf6c719490a7283686667f6e9.
+  Shell syntax/whitespace checks passed. No Terraform changes or apply needed.
+  Access is SSH-tunneled localhost HTTP; HTTPS/automatic deployment remain D9/D10.
+
+- Final live checks: QA 16.171.112.133 and prod 13.49.69.141 running. Both have
+  cloud-init done, authenticated deploy SSH, Docker 29.1.3/Compose 2.40.3, Docker
+  daemon access and writable /opt/takeaway. SSH password/keyboard-interactive
+  authentication disabled. Both firewalls expose only TCP/22 to IPv4, no IPv6.
+  Production Terraform plan returned exit 0, no changes, using isolated local
+  TF_DATA_DIR and prod backend. No apply performed; no AWS resources changed.
+
+- User reports the pipeline finally worked after PR #3. This is user-reported
+  success, not a new independent AWS inspection. Remaining checks: production
+  cloud-init, deploy SSH/Docker access, firewall, and no-change Terraform plan.
 
 - PR #2 merged. Run 34710719583: tests, image publishing and QA apply passed;
   prod blocked because the closed-PR event's deployment ref was refs/pull/2/merge.
