@@ -112,6 +112,14 @@ of D1 and does not authorize creating AWS resources.
 
 ## Latest verification
 
+- PR #2 merged. Run 34710719583: tests, image publishing and QA apply passed;
+  prod blocked because the closed-PR event's deployment ref was refs/pull/2/merge.
+  Production protection stayed main-only. Fix branch codex/fix-merged-deployment-ref:
+  post-merge work now runs on main push, gated by matching that commit to a merged
+  PR; PR open/update still runs tests/planning. Reusable tests take explicit publish
+  boolean. Verified detection against real PR #2; unrelated/unmerged/empty cases
+  rejected. actionlint and whitespace checks pass. No AWS changes for this fix.
+
 - User authorized local apply twice, then push/open PR, with merge/production
   approval left to the user. Naming fix first created QA and repeated with no
   changes, but SSH inspection found Lightsail running YAML as shell. Replaced

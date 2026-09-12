@@ -2,6 +2,11 @@ name: Tests
 
 on:
   workflow_call:
+    inputs:
+      publish:
+        description: Publish only for a verified merged PR on main
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -60,10 +65,10 @@ jobs:
             test-results/
           retention-days: 7
       - name: Export tested image
-        if: github.event.action == 'closed' && github.event.pull_request.merged == true
+        if: inputs.publish
         run: docker save takeaway-service:browser-tests | gzip > tested-image.tar.gz
       - name: Transfer tested image to publishing job
-        if: github.event.action == 'closed' && github.event.pull_request.merged == true
+        if: inputs.publish
         uses: actions/upload-artifact@v7
         with:
           name: tested-image
@@ -74,7 +79,7 @@ jobs:
   publish:
     name: Publish tested image
     needs: tests
-    if: github.event.action == 'closed' && github.event.pull_request.merged == true
+    if: inputs.publish
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

@@ -10,6 +10,10 @@ Terraform does not use the SSH_PRIVATE_KEY secrets; server login/deployment will
 | PR merged into main | Tests and image publishing; fresh QA plan/apply; production approval; fresh prod plan/apply |
 | PR closed without merging or push without a PR | No automatic pipeline |
 
+Post-merge execution uses push on main, not the pull_request closed event, so
+production deployment uses the main ref. A small initial check verifies that the
+commit matches a merged PR; a direct main push without a matching merge stops there.
+
 Terraform jobs run only for changes under infra/server/ or .github/. Fork PRs run
 tests and credential-free Terraform validation; authenticated QA planning is skipped.
 Same-repository PRs use the existing QA credentials, including their write permissions.

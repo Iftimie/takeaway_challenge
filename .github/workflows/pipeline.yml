@@ -3,7 +3,9 @@ name: PR checks and infrastructure promotion
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
 
 permissions:
   contents: read
@@ -11,7 +13,7 @@ permissions:
 # Merged releases, including the approval wait, run one at a time.
 # PR checks use a separate group and never cancel a running apply.
 concurrency:
-  group: pipeline-${{ github.event.action == 'closed' && 'main' || github.event.pull_request.number }}
+  group: pipeline-${{ github.event_name == 'push' && 'main' || github.event.pull_request.number }}
   cancel-in-progress: false
 
 env:
@@ -23,20 +25,23 @@ env:
 
 jobs:
   tests:
-    if: github.event.action != 'closed' || github.event.pull_request.merged == true
+    needs: changes
+    if: github.event_name == 'pull_request' || needs.changes.outputs.release == 'true'
     uses: ./.github/workflows/tests.yml
+    with:
+      publish: ${{ needs.changes.outputs.release == 'true' }}
     permissions:
       contents: read
       packages: write
 
   changes:
-    if: github.event.action != 'closed' || github.event.pull_request.merged == true
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: read
     outputs:
       infrastructure: ${{ steps.files.outputs.infrastructure }}
+      release: ${{ steps.files.outputs.release }}
     steps:
       - id: files
         env:
@@ -45,6 +50,18 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -o pipefail
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            PR_NUMBER=$(gh api --paginate "repos/$REPOSITORY/commits/$GITHUB_SHA/pulls" | jq -sr --arg sha "$GITHUB_SHA" 'add | map(select(.merged_at != null and .base.ref == "main" and .merge_commit_sha == $sha)) | .[0].number // empty')
+            if [ -z "$PR_NUMBER" ]; then
+              echo 'No merged PR matches this main commit; deployment skipped.' >> "$GITHUB_STEP_SUMMARY"
+              echo 'release=false' >> "$GITHUB_OUTPUT"
+              echo 'infrastructure=false' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo 'release=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'release=false' >> "$GITHUB_OUTPUT"
+          fi
           changed=$(gh api --paginate "repos/$REPOSITORY/pulls/$PR_NUMBER/files" | jq -s 'add | any(.[]; [.filename, (.previous_filename // "")] | any(.[]; startswith("infra/server/") or startswith(".github/")))')
           echo "infrastructure=$changed" >> "$GITHUB_OUTPUT"
 
@@ -73,7 +90,7 @@ jobs:
   qa-plan:
     needs: [changes, terraform-validation]
     if: >-
-      github.event.action != 'closed' &&
+      github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       needs.changes.outputs.infrastructure == 'true'
     runs-on: ubuntu-24.04
@@ -106,7 +123,7 @@ jobs:
 
   qa-apply:
     needs: [tests, changes, terraform-validation]
-    if: github.event.action == 'closed' && github.event.pull_request.merged == true && needs.changes.outputs.infrastructure == 'true'
+    if: needs.changes.outputs.release == 'true' && needs.changes.outputs.infrastructure == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: qa
@@ -135,6 +152,7 @@ jobs:
 
   prod-apply:
     needs: qa-apply
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     # Approval gates the entire production job, including its fresh plan.
