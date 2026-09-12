@@ -24,7 +24,7 @@ all creation operations. The user confirmed the plan workflow passed.
 
 See [PIPELINE.md](PIPELINE.md) for triggers, required GitHub environments/IAM policies
 and the approval flow. PRs run tests and QA planning; a merged infrastructure PR
-runs tests, fresh QA plan/apply, prod plan and approval-protected prod apply.
+runs tests, fresh QA plan/apply, production approval and then fresh prod plan/apply.
 The manual apply draft was replaced by this pipeline before it was pushed.
 
 The job summaries show server addresses. Terraform completion does not mean

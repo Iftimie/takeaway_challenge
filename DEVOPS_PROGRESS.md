@@ -5,8 +5,9 @@
 - Status: D1–D6 accepted. D7 in progress: user confirmed GitHub QA plan passed.
   User expanded scope to PR/merge-triggered QA/prod infrastructure promotion now,
   and requested a new branch and PR. Branch: codex/pr-infrastructure-pipeline.
-  No server created. Production/QA planning identities and production apply setup
-  must be configured before merging; details in infra/server/PIPELINE.md.
+  No server created. User requires only qa/prod environments and their existing
+  two IAM users. Both planning environments deleted. User configured the QA PR
+  branch rule and supplied a screenshot. Fixing the PR file-change check CLI error.
 - Current design: [DEVOPS_DESIGN.md](DEVOPS_DESIGN.md). Region: `eu-north-1`.
   Repository: https://github.com/Iftimie/takeaway_challenge.
   D2 committed/pushed in 74bf7dc; user confirmed CI passed and waived the deliberate
@@ -108,6 +109,39 @@ of D1 and does not authorize creating AWS resources.
 - Backend dependency ranges are not fully locked; review reproducibility in CI.
 
 ## Latest verification
+
+- Run 34708871570 failed in changes: gh api rejects --slurp combined with --jq.
+  Replaced with gh api --paginate piped to standalone jq -s; pipefail propagates
+  API errors. User configured refs/pull/*/merge for QA after the prior tool block.
+  Verification: real PR #1 file query passed; app-only, multi-page and renamed-file
+  cases passed. actionlint and whitespace checks passed. Fix is local, not pushed.
+
+- Latest decision supersedes the planning-environment design below: only qa and
+  prod. Deleted qa-plan/prod-plan via GitHub API and verified only qa/prod remain.
+  PR QA plan now targets qa. Prod approval gates a combined fresh plan/apply job;
+  no separate prod-plan job or binary-plan S3 storage. Existing prod settings kept.
+  Automatic approval review rejected adding refs/pull/*/merge to write-capable qa;
+  the rule was not added. User must configure it for PR planning to run.
+
+- User rejected extra IAM users and explicitly chose reuse of existing QA/prod
+  credentials in their planning environments. Created qa-plan (refs/pull/*/merge)
+  and prod-plan (main), copying matching SSH_PUBLIC_KEY variables. Existing qa/prod
+  approvals unchanged. AWS credential values still need copying by the user;
+  neither AWS nor GitHub reveals existing secret access keys.
+  Corrected TakeawayTerraformStateProd (new default v2): existing policy mistakenly
+  pointed at QA state/lock; now prod paths, plus Get/Put/Delete on prod/plans/*.
+  Read-back verified. Lightsail prod tag conditions verified. Removed unused
+  dedicated-planning-user policy drafts locally; docs reflect two-user choice.
+  No new IAM users/access keys, servers, commit or push for these changes.
+
+- PR #1 opened from codex/pr-infrastructure-pipeline (8ce133e). User created
+  production IAM policies/user and uploaded prod AWS credentials; verified secret
+  names only. Generated dedicated RSA 4096 production key outside Git at
+  C:/Users/Alexandru/.ssh/takeaway_prod, restricted private file ACL and verified
+  non-interactive use. Uploaded prod SSH_PRIVATE_KEY secret and SSH_PUBLIC_KEY
+  variable securely; private key never printed. qa-plan/prod-plan environments
+  are not present yet; user still needs planning credentials and public variables.
+  No server, merge or workflow dispatch. This checkpoint update is uncommitted.
 
 - Current pipeline change: PR open/update/reopen runs reusable tests and QA plan;
   merged PR reruns tests/publishes and, for infrastructure changes, QA plan/apply ->
