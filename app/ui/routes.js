@@ -1,6 +1,7 @@
 import { PAGE_SIZE } from './api.js';
 
 const views = {
+  '/restaurants/new': { title: 'Create restaurant', description: 'Add a restaurant name and address.' },
   '/orders': { title: 'My orders', description: 'Your most recent orders first.' },
   '/checkout': { title: 'Checkout', description: 'Confirm your delivery details.' },
   '/cart': { title: 'Cart', description: 'Review your selected items.' },

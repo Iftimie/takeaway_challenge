@@ -1166,7 +1166,14 @@ See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
 milestones, and review status. Payload logging is accepted; the recorded
 performance/metrics scope decisions remain. Database backup implementation was
 explicitly skipped; backups remain a production consideration.
+## Restaurant creation (F11)
+
+Admins can use **Create restaurant** in the navigation to add a name and address
+(F11). On success, open its menu to add items. After an uncertain response, check
+the restaurant list before retrying: the API does not prevent duplicate creation.
+
 ## Restaurant orders (F10)
+
 
 As staff/admin, open a restaurant menu and choose **Manage orders**. The list
 shows two orders per page with delivery details and purchased items. Pagination

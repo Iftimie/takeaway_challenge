@@ -211,7 +211,7 @@ availability persistence, unassigned denial and admin access.
 Verification: JS unit suite passed (32 tests); all 12 browser tests passed
 (32.0s), and 2 UI-serving tests passed. Existing dependency/color warnings remain.
 Compose rebuilt healthy. Stop for F9 review; no F9 commit requested yet.
-F10 accepted including URL pagination; user requested commit and F11. Manage orders link on restaurant
+F10 accepted including URL pagination and committed as 583980f; user requested F11. Manage orders link on restaurant
 menus for staff/admin opens /restaurants/{id}/orders hash view. Two orders per
 page, newest first; delivery details, purchased lines, totals and status shown.
 Explicit Refresh, empty/loading/error states and API assignment checks. Next-step
@@ -232,6 +232,17 @@ Customer orders and other pagination remain unchanged. F10 still awaiting review
 Revision verification: 37 JS unit tests passed; focused real-database browser
 test passed (14.0s), including page-2 reload and Back/Forward. Build and whitespace
 checks passed. No commit requested for this revision.
+F11 accepted; user requested commit and F12. Admin Create restaurant navigation
+opens /restaurants/new hash form with name/address and API-aligned length/blank
+validation. Authenticated POST /restaurants, busy guard, failure/expiry feedback,
+success details and link to new menu. Success invalidates the cached restaurant
+list. Per-account form state; navigation discards unsaved values. No backend or
+dependency changes. Existing API allows duplicate names and has no idempotency:
+uncertain creation advises checking the list before retrying. No automatic retry.
+Verification: 41 JS unit tests, all 14 browser tests (36.8s), 2 UI-serving tests
+passed. Real DB journey checks validation, creation, menu/reload persistence,
+listing and staff UI denial. Existing dependency/color warnings remain.
+Compose rebuilt healthy. Stop for F11 review.
 F1.1 extracts routeFromHash/viewForRoute into app/ui/routes.js, imported by the
 browser and Node tests. app.js now loads as a browser module. Added package.json
 with type=module and test:unit; no npm dependencies or application build step.
