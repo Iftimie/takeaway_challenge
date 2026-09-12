@@ -1,0 +1,24 @@
+#!/bin/bash
+set -eu
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y docker.io docker-compose-v2
+systemctl enable --now docker
+
+if ! id -u deploy >/dev/null 2>&1; then
+  useradd --create-home --user-group --shell /bin/bash deploy
+fi
+usermod -aG docker deploy
+passwd -l deploy
+install -d -m 700 -o deploy -g deploy /home/deploy/.ssh
+# Encoding avoids interpreting any public-key comment as shell code.
+printf '%s' '${ssh_public_key_base64}' | base64 --decode > /home/deploy/.ssh/authorized_keys
+chown deploy:deploy /home/deploy/.ssh/authorized_keys
+chmod 600 /home/deploy/.ssh/authorized_keys
+install -d -o deploy -g deploy /opt/takeaway
+
+printf 'PasswordAuthentication no\nKbdInteractiveAuthentication no\n' > /etc/ssh/sshd_config.d/00-takeaway.conf
+install -d -m 755 /run/sshd
+/usr/sbin/sshd -t
+systemctl restart ssh

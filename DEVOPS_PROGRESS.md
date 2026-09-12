@@ -2,12 +2,14 @@
 
 ## Resume here
 
-- Status: D1–D6 accepted. D7 in progress: user confirmed GitHub QA plan passed.
-  User expanded scope to PR/merge-triggered QA/prod infrastructure promotion now,
-  and requested a new branch and PR. Branch: codex/pr-infrastructure-pipeline.
-  No server created. User requires only qa/prod environments and their existing
-  two IAM users. Both planning environments deleted. User configured the QA PR
-  branch rule and supplied a screenshot. Fixing the PR file-change check CLI error.
+- Status: D1-D6 accepted. D7 QA infrastructure verified locally. Fix branch:
+  codex/fix-lightsail-key-names. Local testing caught both the resource-name collision
+  and Lightsail executing cloud-config as shell; fixed with distinct key names and
+  a shell bootstrap. Final create/repeat applies passed; repeat had zero changes.
+  QA is running at 16.171.112.133; Docker/Compose/deploy SSH and firewall verified.
+  User requested push/new PR, then user-managed merge and production approval.
+  Wait for the user at those manual steps; no GitHub run polling unless requested.
+  Only qa/prod environments and their existing IAM users are used.
 - Current design: [DEVOPS_DESIGN.md](DEVOPS_DESIGN.md). Region: `eu-north-1`.
   Repository: https://github.com/Iftimie/takeaway_challenge.
   D2 committed/pushed in 74bf7dc; user confirmed CI passed and waived the deliberate
@@ -109,6 +111,26 @@ of D1 and does not authorize creating AWS resources.
 - Backend dependency ranges are not fully locked; review reproducibility in CI.
 
 ## Latest verification
+
+- User authorized local apply twice, then push/open PR, with merge/production
+  approval left to the user. Naming fix first created QA and repeated with no
+  changes, but SSH inspection found Lightsail running YAML as shell. Replaced
+  cloud-config with bootstrap.sh.tftpl; live testing also required creating
+  /run/sshd before sshd validation. Recreated empty QA during fixes; firewall now
+  replaces alongside an instance to avoid stale rules when the name is reused.
+- Final corrected create apply succeeded; final repeat apply: 0 add/change/destroy.
+  Authenticated AWS API host keys used for strict SSH verification. Cloud-init done;
+  deploy key login, Docker 29.1.3/Compose 2.40.3, daemon access and writable
+  /opt/takeaway verified. Effective SSH password and keyboard-interactive auth off.
+  AWS firewall: only TCP/22 from 0.0.0.0/0, no IPv6 rules. Shell syntax, Terraform
+  validation and both mocked QA/prod tests passed. No app/DB deployed; prod untouched.
+
+- Run 34709482595: tests/image publish passed; key takeaway-qa created and saved
+  in QA state, instance creation failed because key and instance shared the name.
+  AWS inspection confirmed no instances and only the QA key; production skipped.
+  Naming fix uses takeaway-qa-ssh / takeaway-prod-ssh and preserves server names.
+  Current saved QA plan replaces only the existing imported public-key resource;
+  local/private keys and GitHub SSH values do not change. No manual state deletion.
 
 - Run 34708871570 failed in changes: gh api rejects --slurp combined with --jq.
   Replaced with gh api --paginate piped to standalone jq -s; pipefail propagates
