@@ -65,3 +65,53 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+      - name: Export tested image
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: docker save takeaway-service:browser-tests | gzip > tested-image.tar.gz
+      - name: Transfer tested image to publishing job
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: tested-image
+          path: tested-image.tar.gz
+          retention-days: 1
+          compression-level: 0
+
+  publish:
+    name: Publish tested image
+    needs: tests
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: tested-image
+      - name: Load and tag tested image
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          docker load --input tested-image.tar.gz
+          docker tag takeaway-service:browser-tests "ghcr.io/iftimie/takeaway_challenge:$COMMIT_SHA"
+      - name: Sign in to GHCR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_USER: ${{ github.actor }}
+        run: echo "$GH_TOKEN" | docker login ghcr.io --username "$GH_USER" --password-stdin
+      - name: Push and record digest
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          image="ghcr.io/iftimie/takeaway_challenge:$COMMIT_SHA"
+          docker push "$image"
+          reference=$(docker inspect --format '{{index .RepoDigests 0}}' "$image")
+          test -n "$reference"
+          echo "### Published tested image" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commit: $COMMIT_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Pull/deploy reference: \`$reference\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Sign out of GHCR
+        if: always()
+        run: docker logout ghcr.io

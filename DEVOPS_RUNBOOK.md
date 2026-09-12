@@ -88,5 +88,34 @@ work. To verify the branch restriction, run the same workflow from a temporary
 non-main branch containing it and confirm GitHub refuses environment access.
 Do not weaken the environment rules to make that negative check pass.
 
-The user monitors runs; do not poll unless requested. Live gate verification is
-pending. AWS OIDC was removed from the plan; GHCR and SSH replace ECR/OIDC delivery.
+The user monitors runs; do not poll unless requested. The user confirmed the live
+approval gate worked after correcting environment settings. Non-main branch
+rejection has not been separately tested. AWS OIDC was removed from the plan;
+GHCR and SSH replace ECR/OIDC delivery.
+
+## Publish images (D6)
+
+The Tests workflow publishes only after all tests pass on main (push or manual
+run). Pull requests and other branches do not publish. The test job exports the
+Docker image exercised through Nginx; a separate job downloads and pushes that
+same image. Only the publishing job has packages:write permission. Its built-in
+GITHUB_TOKEN authenticates to GHCR; no manually created token is needed.
+
+Image name: `ghcr.io/iftimie/takeaway_challenge:<full-commit-sha>`.
+The publishing job's summary records `ghcr.io/iftimie/takeaway_challenge@sha256:...`.
+Use that digest for QA and prod: tags can be overwritten by rerunning a build,
+whereas a digest identifies exact contents. This milestone does not deploy.
+
+After the first successful publish, open your GitHub profile -> Packages ->
+takeaway_challenge -> Package settings and change visibility to Public. Public
+repository visibility alone does not make the package public. The Docker source
+label links the package to this repository. Verify an anonymous pull with an empty
+Docker configuration directory; a successful authenticated pull is insufficient.
+This GitHub publication/visibility check remains pending until the workflow is pushed.
+
+The transferred image artifact expires after one day; GHCR image versions persist.
+During demo development, manually remove obsolete package versions from Package
+settings, retaining the deployed digest and any intended rollback digest. At complete
+teardown remove the project package too. No automatic destructive retention job is
+introduced. Images contain application code and build inputs; .dockerignore excludes
+local secrets/state, and credentials are supplied only at runtime.

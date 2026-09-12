@@ -2,9 +2,8 @@
 
 ## Resume here
 
-- Status: D1–D4 accepted. D5 revised: GitHub environments and approval gate only.
-  User confirmed environments configured. Manual gate-check workflow prepared;
-  GitHub execution pending. Use public GHCR images and SSH; no AWS OIDC.
+- Status: D1–D5 accepted. D6 implemented locally, awaiting review and first GHCR
+  publish/public anonymous pull verification. No deployment. Do not poll GitHub.
 - Current design: [DEVOPS_DESIGN.md](DEVOPS_DESIGN.md). Region: `eu-north-1`.
   Repository: https://github.com/Iftimie/takeaway_challenge.
   D2 committed/pushed in 74bf7dc; user confirmed CI passed and waived the deliberate
@@ -56,7 +55,7 @@
   or organization policy change is authorized by the revised deployment decision.
 - GitHub prod approver confirmed: Iftimie, self-approval allowed. Still requires
   an explicit environment approval step. User reports settings configured; live
-  gate verification remains pending.
+  gate verification succeeded per user confirmation.
 - Production approver; a sole operator must not enable a self-approval ban that
   prevents all production deployments.
 - AWS authentication, billing alerts, SSH key setup, QA/prod secrets, certificate
@@ -76,8 +75,8 @@ of D1 and does not authorize creating AWS resources.
 | D2 | GitHub Actions Python/JS/browser tests with disposable PostgreSQL and failure artifacts. | Enable Actions if needed; push approved workflow or authorize push. | Passing CI run; report/trace verified locally; GitHub failure upload/download check waived by user. | Accepted by user; committed/pushed 74bf7dc |
 | D3 | Check tooling and document local AWS/Terraform authentication. | Authenticate with AWS and enable MFA securely. | Correct AWS identity verified; Terraform runs locally. | Accepted by user; not committed |
 | D4 | Bootstrap encrypted/versioned S3 state and locking; document deletion. | Review plan/cost and authorize first resource creation. | Remote state and locking work; state excluded from Git. | Accepted; committed f3bb61f, not pushed |
-| D5 | Configure GitHub QA/prod environments, branch restrictions and approval gate. | Iftimie approver confirmed; complete restricted GitHub settings. | QA can proceed; prod waits for explicit approval; allow Iftimie self-approval. | Implemented, awaiting review and live gate verification |
-| D6 | Publish commit-identified Docker images to public GHCR; document retention/cleanup. | Trigger/push approved workflow; set package visibility if needed. | Passing build publishes a recorded digest; anonymous image pull works. | Not started |
+| D5 | Configure GitHub QA/prod environments, branch restrictions and approval gate. | Iftimie approver confirmed; complete restricted GitHub settings. | QA can proceed; prod waits for explicit approval; allow Iftimie self-approval. | Accepted by user; committed/pushed 75ba1c3 |
+| D6 | Publish commit-identified Docker images to public GHCR; document retention/cleanup. | Trigger/push approved workflow; set package visibility if needed. | Passing build publishes a recorded digest; anonymous image pull works. | Implemented locally, awaiting review and GitHub verification |
 | D7 | Reusable Lightsail Terraform, QA networking, Docker bootstrap and SSH deployment access. | Review plan/cost; generate/store SSH private key securely. | QA server starts; deployment access works; database not public. | Not started |
 | D8 | Deploy QA Compose stack, migrations, secrets and explicit sample-data setup. | Supply QA secrets/admin credentials securely. | QA works; app redeploy preserves DB; seeding is separate. | Not started |
 | D9 | IP-certificate issuance/renewal and HTTPS configuration. | Certificate contact email if needed. | Trusted QA HTTPS and verified renewal procedure. | Not started |
@@ -106,9 +105,20 @@ of D1 and does not authorize creating AWS resources.
 
 ## Latest verification
 
+- D6: Tests workflow exports the tested image only on main after success; a separate
+  packages:write job loads/tags/pushes to GHCR using GITHUB_TOKEN and records digest.
+  Added Docker source label. Image transfer artifact retained one day.
+- Full Docker/Nginx browser suite: 16 passed in 55.7s. Docker export/load preserved
+  image ID; temporary archive removed. Diff whitespace check passed.
+- GHCR publishing and anonymous pull not yet exercised. User must set first package
+  public; documented manual obsolete-version cleanup retaining deployed/rollback
+  digests. No commit/push/deployment for D6. No Python/JS feature changes.
+
 - D5: user reports qa/prod environments configured. Added manual-only
   check-environments.yml: QA prints confirmation, dependent prod job uses GitHub's
-  approval gate. No checkout, secrets, AWS access or deployment. Not pushed/run yet.
+  approval gate. No checkout, secrets, AWS access or deployment. Pushed as 75ba1c3.
+- Initial run did not pause; user corrected environment settings and confirmed
+  the approval gate then worked. Non-main branch rejection not separately tested.
 
 - User approved removing AWS OIDC and proceeding with SSH deployment. Design and
   D5/D6 scope updated to GHCR, local Terraform and GitHub environment approval.

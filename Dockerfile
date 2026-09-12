@@ -6,6 +6,8 @@ RUN npm ci --ignore-scripts && npm run build
 
 FROM python:3.11-slim
 
+LABEL org.opencontainers.image.source="https://github.com/Iftimie/takeaway_challenge"
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
