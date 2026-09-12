@@ -2,8 +2,9 @@
 
 ## Resume here
 
-- Status: D1–D5 accepted. D6 implemented locally, awaiting review and first GHCR
-  publish/public anonymous pull verification. No deployment. Do not poll GitHub.
+- Status: D1–D6 accepted. D7 in progress: QA server configuration drafted and
+  mocked tests passed; no server created. Manual GitHub plan workflow drafted;
+  QA AWS secret names verified. GitHub plan run and server creation still pending.
 - Current design: [DEVOPS_DESIGN.md](DEVOPS_DESIGN.md). Region: `eu-north-1`.
   Repository: https://github.com/Iftimie/takeaway_challenge.
   D2 committed/pushed in 74bf7dc; user confirmed CI passed and waived the deliberate
@@ -29,8 +30,9 @@
 - Python/JS/browser tests run against disposable test data, never deployed prod.
 - SSH deployment with separate QA/prod keys held in GitHub environment secrets.
   Images use public GitHub Container Registry (GHCR), replacing ECR. GitHub publishes
-  with its built-in token; servers pull without registry credentials. No AWS OIDC
-  or AWS access keys in GitHub. Terraform runs locally using the takeaway profile.
+  with its built-in token; servers pull without registry credentials. No AWS OIDC.
+  User chose Terraform in Actions with dedicated IAM user keys in GitHub environment
+  secrets. Bootstrap/teardown remain local using the takeaway profile.
 - Terraform manages resources. Private encrypted/versioned S3 backend with
   locking and separate QA/prod state. Bootstrap resources are separate.
 - No purchased domain. Trusted HTTPS using IP certificates with automated
@@ -76,8 +78,8 @@ of D1 and does not authorize creating AWS resources.
 | D3 | Check tooling and document local AWS/Terraform authentication. | Authenticate with AWS and enable MFA securely. | Correct AWS identity verified; Terraform runs locally. | Accepted by user; not committed |
 | D4 | Bootstrap encrypted/versioned S3 state and locking; document deletion. | Review plan/cost and authorize first resource creation. | Remote state and locking work; state excluded from Git. | Accepted; committed f3bb61f, not pushed |
 | D5 | Configure GitHub QA/prod environments, branch restrictions and approval gate. | Iftimie approver confirmed; complete restricted GitHub settings. | QA can proceed; prod waits for explicit approval; allow Iftimie self-approval. | Accepted by user; committed/pushed 75ba1c3 |
-| D6 | Publish commit-identified Docker images to public GHCR; document retention/cleanup. | Trigger/push approved workflow; set package visibility if needed. | Passing build publishes a recorded digest; anonymous image pull works. | Implemented locally, awaiting review and GitHub verification |
-| D7 | Reusable Lightsail Terraform, QA networking, Docker bootstrap and SSH deployment access. | Review plan/cost; generate/store SSH private key securely. | QA server starts; deployment access works; database not public. | Not started |
+| D6 | Publish commit-identified Docker images to public GHCR; document retention/cleanup. | Trigger/push approved workflow; set package visibility if needed. | Passing build publishes a recorded digest; anonymous image pull works. | Accepted by user; committed/pushed 43c67dd |
+| D7 | Reusable Lightsail Terraform, QA networking, Docker bootstrap and SSH deployment access. | Review plan/cost; generate/store SSH private key securely. | QA server starts; deployment access works; database not public. | In progress: plan ready; awaiting server creation approval |
 | D8 | Deploy QA Compose stack, migrations, secrets and explicit sample-data setup. | Supply QA secrets/admin credentials securely. | QA works; app redeploy preserves DB; seeding is separate. | Not started |
 | D9 | IP-certificate issuance/renewal and HTTPS configuration. | Certificate contact email if needed. | Trusted QA HTTPS and verified renewal procedure. | Not started |
 | D10 | Automatic QA deployment after successful CI, smoke checks and deployment serialization. | Merge/push approved change. | Tested image deployed to QA; clear failure/success result. | Not started |
@@ -105,14 +107,44 @@ of D1 and does not authorize creating AWS resources.
 
 ## Latest verification
 
+- D7 checkpoint committed/pushed as 0dfc332; plan run 34698405042 failed during
+  validation after AWS identity and S3 backend initialization passed. The Windows
+  lockfile lacked the Linux unpacked-provider checksum with read-only init.
+  Ran providers lock for windows_amd64 and linux_amd64 against HashiCorp-signed
+  packages; added the Linux checksum without changing AWS provider 6.64.0.
+  Fix awaits commit/push and remote rerun; no server created.
+
+- D7: Lightsail APIs list eu-north-1, ubuntu_24_04 and small_3_0 Linux IPv4
+  bundle at $12/month; no existing instances. Init/validate and 2 mocked tests pass
+  in infra/server. QA state backend configured; no real server plan/apply yet.
+- Generated RSA 4096 QA key outside repo at C:/Users/Alexandru/.ssh/takeaway_qa;
+  non-interactive use verified and private file ACL restricted. Never print contents.
+  GitHub CLI 2.100.0 authenticated as Iftimie; uploaded qa SSH_PRIVATE_KEY from stdin
+  and verified secret name. Private key contents never displayed.
+- User configured github-actions-qa credentials with custom QA policies. Verified
+  AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and SSH_PRIVATE_KEY secret names only;
+  credential values and effective IAM policies have not been inspected.
+  Uploaded SSH_PUBLIC_KEY as a QA environment variable. Added manual plan-qa.yml,
+  main-only, serialized, pinned Terraform version, QA backend and no apply step.
+  This checks auth/backend access before attempting billable creation; a passing
+  plan does not prove creation permissions. Remote run awaits push authorization.
+  Local verification: Terraform format/validate passed, 2 mocked tests passed,
+  Git whitespace check passed. Python YAML parsing unavailable (PyYAML not installed);
+  workflow execution validation remains pending in GitHub. No dependency installed.
+- Previously detected current public IPv4 for /32 SSH restriction;
+  saved qa.tfplan: 3 add (instance, public key, firewall), 0 change, 0 destroy.
+  No apply. Live cloud-init/SSH verification pending. No D7 commit/push.
+
 - D6: Tests workflow exports the tested image only on main after success; a separate
   packages:write job loads/tags/pushes to GHCR using GITHUB_TOKEN and records digest.
   Added Docker source label. Image transfer artifact retained one day.
 - Full Docker/Nginx browser suite: 16 passed in 55.7s. Docker export/load preserved
   image ID; temporary archive removed. Diff whitespace check passed.
-- GHCR publishing and anonymous pull not yet exercised. User must set first package
-  public; documented manual obsolete-version cleanup retaining deployed/rollback
-  digests. No commit/push/deployment for D6. No Python/JS feature changes.
+- D6 committed/pushed 43c67dd. User reported workflow finished and package public.
+  Pulled full commit-SHA tag using a fresh empty Docker config (no registry credentials).
+  Published reference: ghcr.io/iftimie/takeaway_challenge@sha256:d8f3547788685601d83c285351b20b86ec2efbe1cf7b58201d971200a8b06b83
+- Documented manual obsolete-version cleanup retaining deployed/rollback digests.
+  No deployment. No Python/JS feature changes.
 
 - D5: user reports qa/prod environments configured. Added manual-only
   check-environments.yml: QA prints confirmation, dependent prod job uses GitHub's

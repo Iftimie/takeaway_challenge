@@ -1,0 +1,65 @@
+name: Plan QA infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      ssh_cidr:
+        description: 'Your public IPv4 address followed by /32 (SSH access)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-qa
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: qa
+    defaults:
+      run:
+        working-directory: infra/server
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: eu-north-1
+      AWS_DEFAULT_REGION: eu-north-1
+      AWS_EC2_METADATA_DISABLED: 'true'
+      TF_IN_AUTOMATION: 'true'
+      TF_INPUT: 'false'
+      TF_VAR_environment: qa
+      TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
+      TF_VAR_ssh_cidr: ${{ inputs.ssh_cidr }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: '1.16.2'
+          terraform_wrapper: false
+      - name: Check AWS account and required configuration
+        run: |
+          test -n "$AWS_ACCESS_KEY_ID"
+          test -n "$AWS_SECRET_ACCESS_KEY"
+          test -n "$TF_VAR_ssh_public_key"
+          account=$(aws sts get-caller-identity --query Account --output text)
+          test "$account" = '455958489157'
+      - name: Initialize QA state
+        run: terraform init -backend-config=qa.s3.tfbackend -lockfile=readonly -no-color
+      - name: Check Terraform configuration
+        run: |
+          terraform fmt -check -recursive
+          terraform validate -no-color
+          terraform test -no-color
+      - name: Plan QA resources
+        run: terraform plan -lock-timeout=60s -no-color
+      - name: Explain result
+        run: |
+          echo '### QA infrastructure plan' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Review the Plan QA resources step. This workflow does not apply changes or create a server.' >> "$GITHUB_STEP_SUMMARY"

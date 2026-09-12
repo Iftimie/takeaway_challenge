@@ -38,8 +38,10 @@ contents, so approval cannot accidentally promote a different build.
 
 GitHub publishes with its built-in token and uses separate environment SSH keys
 to deploy to the servers. Servers pull public images without registry credentials.
-There is no AWS OIDC integration or permanent AWS key in GitHub. Terraform runs
-locally using browser-login credentials. Infrastructure changes use reviewed plans;
+There is no AWS OIDC integration. Terraform runs in GitHub Actions using dedicated
+IAM user access keys stored separately in each GitHub environment. QA uses
+github-actions-qa with custom Lightsail and QA-state permissions. Bootstrap and
+teardown run locally using browser-login credentials. Infrastructure changes use reviewed plans;
 ordinary application deployment does not recreate infrastructure. Serialize
 deployments per environment. Run migrations before starting the updated app.
 Sample-data reset remains an explicit destructive action, never a deployment step.
@@ -54,7 +56,7 @@ tags where supported. Names below are proposals, not existing resources.
 | Group | Resources | Naming / state boundary |
 |---|---|---|
 | Bootstrap | Private encrypted, versioned S3 state bucket with state locking | `takeaway-tfstate-<account-id>-<region>`; separate bootstrap state |
-| Shared delivery | Public GHCR package and GitHub QA/prod environments | Proposed package `ghcr.io/iftimie/takeaway_challenge`; GitHub-owned settings, no AWS delivery IAM resources |
+| Shared delivery | Public GHCR package, GitHub QA/prod environments and dedicated infrastructure IAM users | Package `ghcr.io/iftimie/takeaway_challenge`; IAM users/keys configured manually and included in final cleanup |
 | QA | Lightsail instance, firewall rules, SSH public key and any explicitly allocated IP | `takeaway-qa`; `qa/terraform.tfstate` |
 | Prod | Equivalent independent resources | `takeaway-prod`; `prod/terraform.tfstate` |
 | Monitoring | Log groups, metric definitions/filters as needed, one dashboard, per-environment alarms, SNS email notifications | Logs `/takeaway/qa/app`, `/takeaway/prod/app`; dashboard `takeaway`; `monitoring/terraform.tfstate` |
