@@ -951,6 +951,28 @@ missing schemas, and failures. No new dependencies or migrations.
 
 ## Project notes
 
+### UI shell (F1)
+
+Open http://localhost:8080/ui/ with Compose, or http://127.0.0.1:8000/ui/
+with local Uvicorn. After changes, rebuild using
+`docker --context desktop-linux compose up -d --build --wait`.
+
+FastAPI serves `app/ui/`; the existing Nginx proxy needs no new route. Vue
+3.5.13 is stored locally with its MIT license in `app/ui/vendor/` (upstream
+`https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js`). There is no Node build
+step or runtime CDN request. Python package data includes the UI assets.
+
+Restaurants and Log in are placeholders in this milestone. Click between them,
+use Back/Forward, and refresh `/ui/#/login`: the correct heading should appear.
+Unknown hashes display Page not found. No restaurant data, cart or login exists
+in the UI yet. `/docs` remains available.
+
+Focused verification:
+` .\.venv\Scripts\python.exe -m pytest tests/test_ui.py tests/test_health.py tests/test_request_logging.py -q`
+(11 passed; two existing dependency warnings). Browser navigation and refresh
+were also verified through Nginx. The full database suite was not rerun for F1.
+
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
 milestones, and review status. Payload logging is accepted; the recorded
-performance/metrics/backup scope decisions remain.
+performance/metrics scope decisions remain. Database backup implementation was
+explicitly skipped; backups remain a production consideration.

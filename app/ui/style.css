@@ -1,0 +1,9 @@
+[v-cloak] { display: none; }
+body { margin: 0 auto; max-width: 56rem; padding: 1rem; font: 1rem/1.5 system-ui, sans-serif; color: #222; background: #fff; }
+header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem; }
+nav { display: flex; gap: 1rem; }
+a { color: #174ea6; }
+a[aria-current="page"] { font-weight: bold; }
+main { min-height: 16rem; padding: 1rem 0; }
+footer { border-top: 1px solid #ccc; padding-top: 1rem; color: #555; }
+:focus-visible { outline: 2px solid #174ea6; outline-offset: 3px; }

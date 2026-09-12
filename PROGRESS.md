@@ -23,7 +23,7 @@
 - Milestone 18: explicitly accepted and committed (`d7b105c`).
 - Milestone 19: explicitly accepted and committed (`0b4e92c`).
 - Milestone 20: explicitly accepted and committed (`1bfafa4`).
-- Milestone 21: logging and schema-driven redaction explicitly accepted by the user.
+- Milestone 21: logging and schema-driven redaction accepted and committed (`965732a`).
 - Redaction step 1: accepted by the user; emails intentionally left visible.
 - Redaction step 2: schema-aware request/response logging accepted by the user.
   All 401 tests pass with two existing dependency warnings. No new dependencies
@@ -36,7 +36,55 @@
   Rebuilt Compose services are healthy. Live Nginx checks passed for registration,
   login, profile and invalid input: marked values absent from logs, email visible
   in app logs only, response IDs matched proxy logs. Temporary account removed.
-- Performance/metrics/backup scope remains unresolved. No next milestone started.
+- User explicitly skipped the proposed database backup milestone. Backups remain
+  a production consideration, not an implementation task for this challenge.
+- Performance/metrics scope remains unresolved; user switched focus to the UI epic.
+- UI F1: explicitly accepted by the user; commit requested. FastAPI serves /ui/ with pinned local
+  Vue 3.5.13, plain CSS and hash navigation. Restaurants/login are placeholders.
+  Static assets are included in Python packages and the existing Docker image.
+  Verification: 11 focused UI/health/logging tests passed (2 existing warnings).
+  Compose rebuild passed; browser through Nginx verified rendering, navigation,
+  refresh of /ui/#/login and Back. No API integration or authentication yet.
+  User requested two testing submilestones below; neither is started.
+  User requested simplified navigation: retain data, computed view and inline
+  hashchange listener only. Removed dynamic tab titles, heading focus and listener
+  cleanup; this shell stays mounted for the page lifetime. Unknown routes still
+  show a fallback and the main navigation remains available.
+  After simplification: 2 UI serving tests passed, 2 existing warnings. Browser
+  checks above predate this simplification; Docker image has not been rebuilt.
+
+## UI epic plan
+
+F1 is accepted. F1.1 and F1.2 are agreed next submilestones, not yet implemented.
+Later scopes remain proposals to review one milestone at a time.
+Serve same-origin HTML/assets at /ui/ behind existing Nginx. Vue without a build
+step, minimal CSS, hash navigation, no external CDN at runtime. API client
+generation and token persistence remain undecided before affected work.
+
+| Milestone | Scope / acceptance |
+|---|---|
+| F1 | UI shell served locally and through Nginx; local assets and navigation work. |
+| F1.1 | JavaScript unit tests: use Node's built-in test runner/assertions; extract route selection into an importable module, load application JavaScript as a browser module, and test empty, known and unknown hashes. `npm run test:unit` passes without browser, server or database. Document Node setup and ignore generated dependencies. No application build step. |
+| F1.2 | Browser integration tests: add Playwright Test with Chromium only and two tests for navigation/Back/Forward and direct hash URL/refresh. `npm run test:browser` starts a temporary local Uvicorn server; allow targeting Compose via configuration. Document setup, ignore reports, and keep tooling out of the production image. No database fixtures needed for the shell. |
+| F2 | Restaurant list with pagination, loading, empty and error states. |
+| F3 | Selected restaurant menu; unavailable items marked. |
+| F4 | Login/logout, current user/role and expired login handling. |
+| F5 | Customer registration with validation and success feedback. |
+| F6 | One-restaurant cart, quantities and estimated total. |
+| F7 | Checkout, delivery details, idempotent retries and confirmation. |
+| F8 | Customer order list/detail with explicit refresh. |
+| F9 | Staff menu creation/editing/availability for assigned restaurants. |
+| F10 | Staff order listing and permitted status transitions. |
+| F11 | Admin restaurant creation. |
+| F12 | Admin staff creation/assignment; verify API support before implementation. |
+| F13 | Review all role journeys through Nginx and document limitations. |
+
+Proposed lifecycle: in-memory cart and JWT, explicit refresh for orders, visible
+loading/errors and disabled duplicate submissions. Preserve checkout key on an
+uncertain outcome; clear cart only after confirmation. Backend enforces roles
+and prices. Resolve persistence choices before F4/F6.
+
+## Continuity notes
 - User requested lower token usage: use targeted reads and compact check output;
   avoid repeating successful checks without a new reason.
 - The workspace was empty at initial inspection and was not a Git repository.
@@ -100,16 +148,17 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 ## Decisions to settle before affected work
 
-- Exact performance, metrics, and backup acceptance criteria. The PDF mentions
+- Exact performance and metrics acceptance criteria. The PDF mentions
   p95 below 500 ms, contextual logs without PII, service metrics, and database
   snapshots, but workload and operational expectations are unspecified. Do not
-  silently drop these or add tooling without resolving their scope.
+  add tooling without resolving their scope. The user explicitly chose to skip
+  backup implementation; database snapshots are a production consideration only.
 
 ## Milestones and acceptance criteria
 
 Milestones 1-17 are **accepted**;
 Milestones 18-19 are **accepted**;
-Milestone 20 is **accepted**; milestone 21 is **awaiting review**.
+Milestones 20-21 are **accepted**.
 Each is a separate review stop and includes relevant tests or
 operational verification.
 

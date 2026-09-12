@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -20,6 +23,7 @@ app.include_router(staff_router)
 app.include_router(menu_router)
 app.include_router(orders_router)
 app.include_router(staff_orders_router)
+app.mount("/ui", StaticFiles(directory=Path(__file__).parent / "ui", html=True), name="ui")
 
 
 @app.exception_handler(RequestValidationError)

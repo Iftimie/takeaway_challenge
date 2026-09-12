@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Takeaway Service</title>
+  <link rel="stylesheet" href="/ui/style.css">
+  <script defer src="/ui/vendor/vue-3.5.13.global.prod.js"></script>
+  <script defer src="/ui/app.js"></script>
+</head>
+<body>
+  <div id="app" v-cloak>
+    <header>
+      <strong>Takeaway Service</strong>
+      <nav aria-label="Main navigation">
+        <a href="#/restaurants" :aria-current="route === '/restaurants' ? 'page' : null">Restaurants</a>
+        <a href="#/login" :aria-current="route === '/login' ? 'page' : null">Log in</a>
+      </nav>
+    </header>
+    <main>
+      <h1>{{ view.title }}</h1>
+      <p>{{ view.description }}</p>
+    </main>
+    <footer>UI preview · <a href="/docs">API documentation</a></footer>
+  </div>
+  <noscript>This interface requires JavaScript. <a href="/docs">Open API documentation</a>.</noscript>
+</body>
+</html>
