@@ -1,0 +1,12 @@
+# Only send application build inputs to Docker (never .env or .venv).
+**
+!Dockerfile
+!.dockerignore
+!pyproject.toml
+!app/
+!app/**
+!alembic.ini
+!migrations/
+!migrations/**
+**/__pycache__/
+**/*.pyc

@@ -734,8 +734,53 @@ Expected: `35 passed, 5 deselected`. PostgreSQL must be running. Ordinary tests
 roll back their rows; concurrency tests commit temporary data and clean up only
 their own records. No new dependencies or migrations are needed.
 
+## Application container
+
+With Docker Desktop running, build the application image from the project root:
+
+```powershell
+docker --context desktop-linux build -t takeaway-service:milestone19 .
+docker --context desktop-linux run --rm --name takeaway-app -p 127.0.0.1:8001:8000 takeaway-service:milestone19
+```
+
+The second command runs in the foreground. In another terminal:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8001/health
+docker --context desktop-linux inspect --format '{{.State.Health.Status}}' takeaway-app
+```
+
+Expected: `status` is `ok`; Docker reports `healthy` after its first successful
+check (allow around 10 seconds). API docs are at http://127.0.0.1:8001/docs.
+Stop with Ctrl+C in the first terminal, or `docker --context desktop-linux stop
+takeaway-app` in the second. `--rm` removes the stopped container, not its image.
+If port 8001 is occupied, choose another host port before `:8000`.
+
+The image uses Python 3.11 slim, installs production dependencies from
+`pyproject.toml`, and runs one Uvicorn process as non-root UID 10001. Uvicorn
+binds all container interfaces so the published localhost port can reach it.
+`EXPOSE 8000` documents the container port; `-p` publishes it on the host.
+No development reload or test dependencies are included. A Python standard-library
+HTTP probe checks liveness without installing curl.
+
+`.dockerignore` only permits application build inputs; local secrets, the virtual
+environment, Git history, tests, and caches are excluded. Alembic configuration
+and migrations are included, but startup does not run migrations automatically.
+
+This command demonstrates application startup and health without database
+configuration. Database-backed endpoints require runtime database settings and
+JWT authentication requires JWT_SECRET; those are wired through Compose in the
+next milestone. Container localhost refers to the container itself. The health
+endpoint does not verify database readiness.
+
+Verification performed: image build, Docker health status, HTTP health from both
+inside and outside the container, non-root UID, migration files, absence of local
+secrets/virtual environment, and `pip check`. The temporary test container was
+removed afterward. Image tags and dependency ranges are not locked, so future
+builds can resolve newer patch/minor versions.
+
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Application containerization and full
-deployment belong to later milestones.
+milestones, and review status. Full Compose deployment and request logging
+belong to later milestones.

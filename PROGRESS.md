@@ -20,8 +20,9 @@
 - Milestone 15: explicitly accepted and manually committed by user (`ee91a55`).
 - Milestone 16: explicitly accepted and manually committed by user (`f87b809`).
 - Milestone 17: explicitly accepted and committed (`adec890`).
-- Milestone 18: explicitly accepted; user requested its commit.
-- Next step: milestone 19 (application container), authorized by the user.
+- Milestone 18: explicitly accepted and committed (`d7b105c`).
+- Milestone 19: explicitly accepted; user requested its commit.
+- Next step: milestone 20 (full Compose deployment), authorized by the user.
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -91,7 +92,8 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 ## Milestones and acceptance criteria
 
 Milestones 1-17 are **accepted**;
-Milestone 18 is **accepted**; milestones 19-21 are **not started**.
+Milestones 18-19 are **accepted**;
+milestones 20-21 are **not started**.
 Each is a separate review stop and includes relevant tests or
 operational verification.
 
@@ -135,6 +137,19 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 19: Dockerfile uses python:3.11-slim, installs the application without
+  test extras, includes Alembic/migrations, and runs Uvicorn on 0.0.0.0:8000 as
+  appuser UID 10001. Standard-library HTTP health check; no reload. .dockerignore
+  allowlists build inputs, excluding .env/.venv/Git/tests and caches.
+- Verification: built takeaway-service:milestone19; temporary container became
+  healthy; internal and host HTTP /health returned 200/status ok; UID 10001,
+  migration presence, absent .env/.venv, and pip check verified. Temporary
+  container stopped and auto-removed. Image retained for user review.
+- No Python behavior changed; full 372-test suite was not rerun for Docker-only
+  changes. No DB connection or Nginx exercised here; full deployment is milestone
+  20. No auto-migrations. Base image/dependency ranges are not locked; build
+  resolved PyJWT 2.14.0 while the existing local environment used 2.13.0.
+- User approved milestone 19 and requested its commit; nothing pushed.
 - Milestone 18: assigned-staff PATCH /restaurants/{restaurant_id}/orders/{order_id}/status
   accepts only a status field and returns full OrderResponse (200). Validates
   current/next status; missing or mismatched order 404; invalid transitions 409;
