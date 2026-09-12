@@ -113,8 +113,8 @@ of D1 and does not authorize creating AWS resources.
 - Configured QA SSH_KNOWN_HOSTS from authenticated AWS host keys. The same helper
   passed a live local-to-QA deployment and public smoke checks. Five focused tests,
   actionlint and whitespace checks passed. No Terraform resources changed; no plan
-  needed. First merged Actions deployment remains unverified. Changes are uncommitted;
-  ask before commit/push/PR. Refresh the pinned host variable if QA is recreated.
+  needed. First merged Actions deployment remains unverified. User authorized commit,
+  push and PR on branch codex/d10-qa-deployment; implementation awaits review. Refresh the pinned host variable if QA is recreated.
 
 - User approved D8, then canceled D9. Restored HTTP-only QA; health passed.
   Removed TLS config, renewal job and certificate/challenge volumes; retained DB.
