@@ -182,7 +182,7 @@ retries: HTTP 200 returns the original ID and order listing contains one order.
 Fixture cleanup now deletes order lines/orders before menus/restaurants/users.
 Existing dependency and color warnings remain. Compose rebuilt healthy for
 manual review; git diff --check passed. Stop for F7 review.
-F8 accepted; user requested commit and F9. My orders navigation and /orders,
+F8 accepted and committed as 56072b0; user requested F9. My orders navigation and /orders,
 /orders/{id} hash views use existing customer-only APIs. Two orders per page,
 newest first, detail snapshots/delivery/total/status and explicit Refresh.
 Checkout confirmation links to its order. Loading, empty, missing, failure and
@@ -195,6 +195,22 @@ still start with no orders. Verification: 29 JS unit tests and 2 UI-serving test
 passed, with the existing Python dependency warnings. All 11 browser tests passed
 (26.7s), including real history pagination/details/refresh/missing/logout checks.
 Compose rebuilt healthy; git diff --check passed. Stop for F8 review.
+F9 accepted; user requested commit and F10. Staff/admin see a Manage menu
+section below a restaurant's public menu. Create or select a current-page item
+to edit name, decimal-string price and availability. Saves reload that page;
+new items appear at the end of the existing two-item pagination. Form state is
+per restaurant/account visit. Validation/errors and expired login use existing
+patterns. API permissions remain authoritative: assigned staff or any admin.
+Flagged API gap before implementation: no assigned-restaurant listing endpoint.
+Staff browse the public list; unassigned saves show 403 feedback. No backend
+changes or dependencies. Uncertain writes advise refreshing before retrying;
+menu creation has no idempotency support. Navigation discards unsaved edits.
+Isolated seed-menu fixtures add assigned staff and an admin; cleanup removes
+assignments before users/restaurants. Browser journey checks create, edit price,
+availability persistence, unassigned denial and admin access.
+Verification: JS unit suite passed (32 tests); all 12 browser tests passed
+(32.0s), and 2 UI-serving tests passed. Existing dependency/color warnings remain.
+Compose rebuilt healthy. Stop for F9 review; no F9 commit requested yet.
 F1.1 extracts routeFromHash/viewForRoute into app/ui/routes.js, imported by the
 browser and Node tests. app.js now loads as a browser module. Added package.json
 with type=module and test:unit; no npm dependencies or application build step.

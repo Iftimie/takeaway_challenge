@@ -16,7 +16,7 @@ os.environ.update({
 from sqlalchemy import delete, text, select
 from sqlalchemy.orm import Session
 from app.db import get_engine
-from app.models import Restaurant, MenuItem, User, Order, OrderItem
+from app.models import Restaurant, MenuItem, User, Order, OrderItem, StaffAssignment
 from app.auth.service import password_hasher
 
 
@@ -26,12 +26,13 @@ def compose(*args):
                     *args], cwd=ROOT, check=True)
 
 
-def fixtures(seed, orders=False):
+def fixtures(seed, orders=False, staff=False):
     # The fixed endpoint and identity check prevent cleanup of the normal DB.
     with Session(get_engine()) as session:
         if (session.scalar(text('SELECT current_database()')) != 'takeaway_browser_test'
                 or session.scalar(text('SELECT current_user')) != 'browser_test'):
             raise RuntimeError('Refusing fixture changes outside the browser test database')
+        session.execute(delete(StaffAssignment))
         session.execute(delete(OrderItem))
         session.execute(delete(Order))
         session.execute(delete(MenuItem))
@@ -48,6 +49,14 @@ def fixtures(seed, orders=False):
                                      price='12.50', available=i != 2) for i in range(1, 4)])
             session.add(MenuItem(restaurant_id=restaurants[1].id, name='Other Restaurant Meal',
                                  price='9.00', available=True))
+        if staff:
+            worker = User(email='browser-staff@example.com', name='Browser Staff', role='staff',
+                          password_hash=password_hasher.hash('Browser-test-password-123!'))
+            session.add(worker)
+            session.add(User(email='browser-admin@example.com', name='Browser Admin', role='admin',
+                             password_hash=password_hasher.hash('Browser-test-password-123!')))
+            session.flush()
+            session.add(StaffAssignment(staff_id=worker.id, restaurant_id=restaurants[0].id))
         if orders:
             session.flush()
             customer = session.scalar(select(User))
@@ -66,7 +75,7 @@ def fixtures(seed, orders=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=['prepare', 'seed', 'seed-orders', 'clean', 'stop'])
+    parser.add_argument('action', choices=['prepare', 'seed', 'seed-orders', 'seed-menu', 'clean', 'stop'])
     action = parser.parse_args().action
     if action == 'prepare':
         try:
@@ -78,4 +87,4 @@ if __name__ == '__main__':
     elif action == 'stop':
         compose('down')
     else:
-        fixtures(action in ('seed', 'seed-orders'), orders=action == 'seed-orders')
+        fixtures(action in ('seed', 'seed-orders', 'seed-menu'), orders=action == 'seed-orders', staff=action == 'seed-menu')

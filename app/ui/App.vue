@@ -1,4 +1,5 @@
 <script>
+import MenuEditor from './components/MenuEditor.vue';
 import OrdersView from './components/OrdersView.vue';
 import CheckoutView from './components/CheckoutView.vue';
 import { checkoutState, placeOrder } from './checkout.js';
@@ -16,7 +17,7 @@ import { restaurantState, canGoNext, loadRestaurants } from './restaurants.js';
 import { sessionState, login, logout, restoreSession } from './session.js';
 
 export default {
-  components: { LoginView, RestaurantList, MenuView, RegisterView, CartView, CheckoutView, OrdersView },
+  components: { LoginView, RestaurantList, MenuView, RegisterView, CartView, CheckoutView, OrdersView, MenuEditor },
   data() {
     return { route: routeFromHash(window.location.hash), restaurants: restaurantState(), pageSize: PAGE_SIZE, menu: menuState(0),
       session: sessionState(window.sessionStorage), email: '', password: '',
@@ -138,6 +139,9 @@ export default {
       <LoginView v-if="route === '/login'" :session="session" v-model:email="email" v-model:password="password" @submit="submitLogin" />
       <RestaurantList v-if="route === '/restaurants'" :restaurants="restaurants" :page-size="pageSize" :has-next-page="hasNextPage" @load-page="loadPage" />
       <MenuView v-if="menuId" :menu="menu" :page-size="pageSize" :has-next-menu-page="hasNextMenuPage" @load-page="loadMenuPage" @add-item="addToCart" />
+      <MenuEditor v-if="menuId && menu.restaurant && ['staff', 'admin'].includes(session.user?.role)"
+        :key="`${menuId}-${session.user.id}`" :session="session" :restaurant-id="menuId" :items="menu.items"
+        @saved="loadMenuPage(menu.offset)" />
     </main>
     <footer>UI preview · <a href="/docs">API documentation</a></footer>
   </div>

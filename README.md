@@ -1166,7 +1166,16 @@ See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
 milestones, and review status. Payload logging is accepted; the recorded
 performance/metrics scope decisions remain. Database backup implementation was
 explicitly skipped; backups remain a production consideration.
-## UI checkout (F7)
+## Menu editing (F9)
+
+Log in as staff or admin, open a restaurant menu, and use **Manage menu** below
+the public list. Create an item or select **Edit** for an item on the current
+page. Edit its name, price and availability, then save. New items appear at the
+end of the menu; use Next to find them. Staff saves require an assignment;
+admins may manage any restaurant. Navigating away discards unsaved edits.
+After an uncertain save, refresh and inspect the menu before retrying creation.
+
+## Checkout and order history (F7–F8)
 
 Customer order history is available under **My orders** after login. It shows
 two orders per page, newest first. Open an order for delivery details and item
