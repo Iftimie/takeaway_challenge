@@ -47,6 +47,7 @@ during each Terraform operation. If main changes while approval is pending, the
 production job stops; run the latest appropriate merged-PR workflow and approve
 again. Preserve state after failures; partial resources may exist and incur charges.
 
-This pipeline provisions servers only. App deployment, database setup, cloud-init/SSH
-verification and QA smoke tests remain pending. Successful QA apply is not an app
-health check. Branch protection/required checks remain separate repository settings.
+This pipeline provisions servers only. D8 adds manual QA app deployment using
+[deploy/README.md](../../deploy/README.md); automation remains D10. Successful
+Terraform apply is not an app health check. Branch protection/required checks
+remain separate repository settings.
