@@ -16,7 +16,7 @@ os.environ.update({
 from sqlalchemy import delete, text
 from sqlalchemy.orm import Session
 from app.db import get_engine
-from app.models import Restaurant
+from app.models import Restaurant, MenuItem
 
 
 def compose(*args):
@@ -31,10 +31,17 @@ def fixtures(seed):
         if (session.scalar(text('SELECT current_database()')) != 'takeaway_browser_test'
                 or session.scalar(text('SELECT current_user')) != 'browser_test'):
             raise RuntimeError('Refusing fixture changes outside the browser test database')
+        session.execute(delete(MenuItem))
         session.execute(delete(Restaurant))
         if seed:
-            session.add_all([Restaurant(name=f'Browser Restaurant {i}', address=f'Test Street {i}')
-                             for i in range(1, 4)])
+            restaurants = [Restaurant(name=f'Browser Restaurant {i}', address=f'Test Street {i}')
+                           for i in range(1, 4)]
+            session.add_all(restaurants)
+            session.flush()
+            session.add_all([MenuItem(restaurant_id=restaurants[0].id, name=f'Test Meal {i}',
+                                     price='12.50', available=i != 2) for i in range(1, 4)])
+            session.add(MenuItem(restaurant_id=restaurants[1].id, name='Other Restaurant Meal',
+                                 price='9.00', available=True))
         session.commit()
 
 

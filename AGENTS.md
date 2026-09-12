@@ -19,6 +19,8 @@ This is a take-home backend challenge being built incrementally for learning.
   acceptance when the user provides it. Do not automatically start the next
   milestone.
 - Do not commit or push unless the user explicitly requests it.
+- Use dash-separated browser test titles so they are easier to match to trace
+  archive names. Preserve the user's manually renamed titles.
 
 The intended stack is FastAPI, Pydantic, PostgreSQL, SQLAlchemy, Alembic, JWT
 authentication, Docker Compose, and Nginx in front of Uvicorn. Introduce each

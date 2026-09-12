@@ -951,6 +951,22 @@ missing schemas, and failures. No new dependencies or migrations.
 
 ## Project notes
 
+### Menu browsing (F3)
+
+Click View menu beside a restaurant. `/ui/#/restaurants/123/menu` supports direct
+navigation and refresh. The view shows restaurant name, item names, API prices in
+EUR and Available/Unavailable labels. Menus show 2 items per page with Previous
+and Next, plus loading, empty, missing restaurant and retryable error states.
+Back to restaurants retains the restaurant page; reopening a menu starts page 1.
+No cart or ordering controls are introduced. A full final page may still lead
+to an empty page because the API does not return a total count.
+
+Browser fixtures now include three menu items for the first restaurant (one
+unavailable), one for the second and none for the third. The real database test
+checks pagination, restaurant isolation, refresh, empty and missing restaurants.
+Cleanup removes menu items before restaurants. Unit tests cover menu routing,
+API requests, pagination and error recovery. Use the existing test commands.
+
 ### Restaurant browsing (F2)
 
 Open `/ui/` to load restaurants from the existing same-origin API. Names and
@@ -961,7 +977,7 @@ must be available for real browsing.
 A full last page can lead to one empty page because the API has no total count;
 Previous returns to the prior page. Next respects the API offset ceiling of 10000.
 Switching views retains the list; browser refresh starts at page 1. Menu browsing
-is deferred to F3. No generated API client or new dependency was added.
+is now available in F3. No generated API client or new dependency was added.
 
 Verification: 6 JavaScript unit tests and 5 browser tests pass; the prior 2
 UI-serving checks also passed. Pagination uses 3 committed records in an isolated
@@ -980,7 +996,7 @@ From the repository root:
 npm run test:unit
 ```
 
-Expected: 6 passed including restaurant tests. If PowerShell blocks npm.ps1, use `npm.cmd run test:unit`.
+Expected: 9 passed including restaurant/menu tests. If PowerShell blocks npm.ps1, use `npm.cmd run test:unit`.
 Tests cover empty hashes, known routes, and unknown routes (including inherited
 object property names). They import the same `app/ui/routes.js` used by the UI.
 `app.js` is loaded with `type="module"` so it can import these functions directly.
@@ -1035,7 +1051,7 @@ $env:UI_BASE_URL = 'http://localhost:8080'
 try { npm run test:browser } finally { Remove-Item Env:UI_BASE_URL }
 ```
 
-This runs 4 controlled-response tests, skips the real DB test, and never seeds or
+This runs 4 controlled-response tests, skips the 2 real DB tests, and never seeds or
 cleans the normal deployment. It skips temporary-server/database startup and
 leaves Compose running. To see the
 browser during either run, use `npm run test:browser -- --headed`.

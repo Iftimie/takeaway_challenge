@@ -67,7 +67,7 @@ Local browser suite: 2 passed in 2.6s; benign NO_COLOR/FORCE_COLOR warning.
 Compose rebuilt healthy; the same 2 tests passed through Nginx in 1.7s.
 git diff --check passed. Backend/unit suites were not repeated for tooling-only
 changes. Compose remains running; the temporary local test server was stopped.
-F2 is explicitly accepted by the user; commit requested. Added handwritten fetch client and restaurant
+F2 is accepted and committed (`297d89a`). Added handwritten fetch client and restaurant
 state module, name/address list, pagination, loading/empty/error/retry.
 Duplicate loads are prevented; Next respects API offset ceiling 10000. A full
 last page may lead to one empty page because API has no total count. Previous
@@ -88,7 +88,22 @@ DB fixtures and run mocked tests only. No normal application data modified.
 Updated pagination unit/mock tests for PAGE_SIZE=2. Verification: 6 unit tests and
 5 browser tests passed (11.5s browser suite); Docker ps confirmed test container
 removed. User approved F2, fixture setup/teardown and trace shortcuts for commit.
-Next milestone is F3 menu browsing; not started.
+F3 menu browsing is accepted by the user; commit requested. View menu links use
+#/restaurants/{id}/menu; show restaurant name, unchanged API price strings/EUR,
+availability, 2-item pagination, loading/error/retry/empty/not-found states and
+Back to restaurants. Menu visits reset page 1; restaurant list state is retained.
+Separate state per menu visit prevents late responses overwriting another menu.
+Fixtures seed 3 menu items (one unavailable) for restaurant 1, one for restaurant
+2, and none for restaurant 3. Cleanup deletes menu rows before restaurants.
+Real DB browser test covers pagination, availability, isolation, refresh, empty
+menu and missing restaurant. No cart, authentication or backend changes.
+Verification: 9 unit tests, 6 browser tests (14.1s) and 2 UI-serving tests passed;
+existing color/dependency warnings remain. Compose rebuilt healthy for review.
+Commit F3. Browser test titles must use dashes, as requested by the user.
+Manual app/auth/dependencies.py edit permits admins through restaurant assignment
+checks; preserved separately from F3. Authorization tests and other service-level
+checks have not yet been reconciled with that permission change.
+Next: F4 login/logout. Token persistence is still an unresolved design decision.
 Added requested trace shortcuts: npm run test:trace retains all test traces;
 npm run trace lists current trace.zip archives and opens the selected number.
 No additional dependencies; Enter cancels and missing traces show guidance.

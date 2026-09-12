@@ -7,11 +7,11 @@ test('real-database-pagination-shows-two-restaurants-then-the-third', async ({ p
   try {
     database('seed');
     await page.goto('/ui/');
-    await expect(page.getByRole('listitem')).toHaveText([
-      'Browser Restaurant 1Test Street 1', 'Browser Restaurant 2Test Street 2',
+    await expect(page.getByRole('listitem').locator('strong')).toHaveText([
+      'Browser Restaurant 1', 'Browser Restaurant 2',
     ]);
     await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await expect(page.getByRole('listitem')).toHaveText(['Browser Restaurant 3Test Street 3']);
+    await expect(page.getByRole('listitem').locator('strong')).toHaveText(['Browser Restaurant 3']);
     await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled();
     await page.getByRole('button', { name: 'Previous', exact: true }).click();
     await expect(page.getByRole('listitem')).toHaveCount(2);
