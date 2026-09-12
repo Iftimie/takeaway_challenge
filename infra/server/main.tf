@@ -41,7 +41,8 @@ locals {
 }
 
 resource "aws_lightsail_key_pair" "server" {
-  name       = local.name
+  # Lightsail names must be unique across resource types in the region.
+  name       = "${local.name}-ssh"
   public_key = trimspace(var.ssh_public_key)
   tags       = local.tags
 }
@@ -55,27 +56,18 @@ resource "aws_lightsail_instance" "server" {
   key_pair_name     = aws_lightsail_key_pair.server.name
   tags              = local.tags
 
-  user_data = "#cloud-config\n${yamlencode({
-    package_update = true
-    packages       = ["docker.io", "docker-compose-v2"]
-    ssh_pwauth     = false
-    users = ["default", {
-      name                = "deploy"
-      groups              = "docker"
-      shell               = "/bin/bash"
-      lock_passwd         = true
-      ssh_authorized_keys = [trimspace(var.ssh_public_key)]
-    }]
-    runcmd = [
-      ["systemctl", "enable", "--now", "docker"],
-      ["install", "-d", "-o", "deploy", "-g", "deploy", "/opt/takeaway"]
-    ]
-  })}"
+  user_data = templatefile("${path.module}/bootstrap.sh.tftpl", {
+    ssh_public_key_base64 = base64encode(trimspace(var.ssh_public_key))
+  })
 }
 
 # D7 exposes SSH only. Web ports are added when the application needs them.
 resource "aws_lightsail_instance_public_ports" "server" {
   instance_name = aws_lightsail_instance.server.name
+  # Reapply our rules when an instance is replaced with the same name.
+  lifecycle {
+    replace_triggered_by = [aws_lightsail_instance.server]
+  }
   port_info {
     protocol  = "tcp"
     from_port = 22

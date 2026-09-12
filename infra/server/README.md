@@ -57,10 +57,14 @@ Only the public key enters Terraform. The private key is stored outside the repo
 and uploaded to GitHub's qa environment as SSH_PRIVATE_KEY. Never commit it.
 The saved plan is ignored by Git. Generate a fresh plan after configuration changes.
 
-Cloud-init installs Ubuntu's Docker/Compose packages and creates deploy with access
+Lightsail runs bootstrap.sh.tftpl as a shell launch script through cloud-init.
+It installs Ubuntu's Docker/Compose packages and creates deploy with access
 to Docker and /opt/takeaway. Docker group membership effectively grants host-level
 control; this is a dedicated QA key, not a command-restricted deployment credential.
 The Ubuntu administrative account also uses this key. Password SSH login is disabled.
+The imported key is named takeaway-qa-ssh (takeaway-prod-ssh in prod), distinct from
+the server name because Lightsail shares resource names within a region.
+Replacing a server also replaces its firewall resource so default rules are reset.
 
 Only SSH is exposed, from any IPv4 address (0.0.0.0/0), so local and GitHub runner
 IPs need no allowlist. Login requires the SSH key; password login is disabled.

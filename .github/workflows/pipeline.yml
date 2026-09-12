@@ -66,6 +66,7 @@ jobs:
         run: |
           terraform init -backend=false -lockfile=readonly -no-color
           terraform fmt -check -recursive
+          bash -n bootstrap.sh.tftpl
           terraform validate -no-color
           terraform test -no-color
 
