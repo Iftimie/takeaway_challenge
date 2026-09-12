@@ -2,8 +2,14 @@
   "name": "takeaway-ui-tests",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "test:unit": "node --test tests/ui-unit/*.test.js"
+    "test:unit": "node --test tests/ui-unit/*.test.js",
+    "test:browser": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
   }
 }

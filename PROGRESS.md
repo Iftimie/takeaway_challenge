@@ -55,7 +55,19 @@
 
 ## UI epic plan
 
-F1 and F1.1 are accepted. User requested the F1.1 commit and F1.2 implementation.
+F1 and F1.1 are accepted; F1.1 committed as `d940626`.
+F1.2 is accepted by the user; commit requested. Added Playwright Test 1.63.0, lockfile,
+Chromium-only config and two browser tests. Default run owns a temporary Uvicorn
+server on port 8766; UI_BASE_URL targets an existing deployment instead.
+Tests cover view navigation/Back/Forward and direct hash URL/refresh. One worker,
+no retries, traces retained on failure. User enabled video recording for all tests;
+preserved that setting. User finds traces sufficient for inspecting test actions;
+use --trace on to retain passing traces. Node tooling stays outside the production image.
+Local browser suite: 2 passed in 2.6s; benign NO_COLOR/FORCE_COLOR warning.
+Compose rebuilt healthy; the same 2 tests passed through Nginx in 1.7s.
+git diff --check passed. Backend/unit suites were not repeated for tooling-only
+changes. Compose remains running; the temporary local test server was stopped.
+No application behavior changes. Next milestone is F2; not started.
 F1.1 extracts routeFromHash/viewForRoute into app/ui/routes.js, imported by the
 browser and Node tests. app.js now loads as a browser module. Added package.json
 with type=module and test:unit; no npm dependencies or application build step.

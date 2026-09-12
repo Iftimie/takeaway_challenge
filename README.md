@@ -955,7 +955,7 @@ missing schemas, and failures. No new dependencies or migrations.
 
 Use Node.js 22 or newer with npm (verified with Node 24.20.0). These are
 development tools only; the application still runs without Node or a build step.
-No `npm install` is needed yet because the unit tests use Node's built-in
+No npm dependencies are needed for the unit tests because they use Node's built-in
 `node:test` and `node:assert/strict` modules with no external dependencies.
 
 From the repository root:
@@ -969,7 +969,41 @@ Tests cover empty hashes, known routes, and unknown routes (including inherited
 object property names). They import the same `app/ui/routes.js` used by the UI.
 `app.js` is loaded with `type="module"` so it can import these functions directly.
 No browser, running server or database is required for the unit tests.
-Browser automation setup belongs to F1.2; these tests do not test Vue rendering.
+These tests do not test Vue rendering; the browser suite below does.
+
+### Browser integration tests (F1.2)
+
+One-time setup from the repository root (requires Node 22+ and the existing
+Python `.venv` with application dependencies):
+
+```powershell
+npm ci
+npx playwright install chromium
+npm run test:browser
+```
+
+Use `npm.cmd`/`npx.cmd` if PowerShell blocks the corresponding `.ps1` scripts.
+Playwright starts a temporary Uvicorn server on port 8766 and stops it after the
+run. Keep that port free. No PostgreSQL is needed for these two shell tests.
+They cover navigation with Back/Forward and a direct hash URL surviving refresh.
+Each test gets a fresh browser context; Chromium runs headlessly, with one worker
+and no retries. No screenshots are compared. Video recording is currently enabled
+for every test; videos are saved under ignored `test-results/`. Failed runs save a trace under
+ignored `test-results/`; inspect it with `npx playwright show-trace <trace.zip>`.
+Use `npm run test:browser -- --trace on` to retain traces of passing tests too,
+or `npm run test:browser -- --ui` to inspect actions in Playwright UI mode.
+
+To run the same tests against an already-running, rebuilt Compose deployment:
+
+```powershell
+$env:UI_BASE_URL = 'http://localhost:8080'
+try { npm run test:browser } finally { Remove-Item Env:UI_BASE_URL }
+```
+
+This skips temporary-server startup and leaves Compose running. To see the
+browser during either run, use `npm run test:browser -- --headed`.
+Playwright is a pinned development dependency in package.json/package-lock.json;
+neither Node tooling nor test reports are included in the production image.
 
 ### UI shell (F1)
 
