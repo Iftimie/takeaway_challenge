@@ -11,11 +11,15 @@ def test_ui_redirect_and_local_assets():
         page = client.get('/ui/')
         assert page.status_code == 200
         assert 'text/html' in page.headers['content-type']
+        assert 'type="module" src="/ui/app.js"' in page.text
         for path in ('style.css', 'app.js', 'vendor/vue-3.5.13.global.prod.js'):
             assert f'/ui/{path}' in page.text
             asset = client.get(f'/ui/{path}')
             assert asset.status_code == 200
             assert asset.content
+        module = client.get('/ui/routes.js')
+        assert module.status_code == 200
+        assert 'javascript' in module.headers['content-type']
 
 
 def test_ui_missing_asset_does_not_return_html_shell():

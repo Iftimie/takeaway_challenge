@@ -39,13 +39,13 @@
 - User explicitly skipped the proposed database backup milestone. Backups remain
   a production consideration, not an implementation task for this challenge.
 - Performance/metrics scope remains unresolved; user switched focus to the UI epic.
-- UI F1: explicitly accepted by the user; commit requested. FastAPI serves /ui/ with pinned local
+- UI F1: accepted and committed (`0d6a777`). FastAPI serves /ui/ with pinned local
   Vue 3.5.13, plain CSS and hash navigation. Restaurants/login are placeholders.
   Static assets are included in Python packages and the existing Docker image.
   Verification: 11 focused UI/health/logging tests passed (2 existing warnings).
   Compose rebuild passed; browser through Nginx verified rendering, navigation,
   refresh of /ui/#/login and Back. No API integration or authentication yet.
-  User requested two testing submilestones below; neither is started.
+  User requested two testing submilestones below.
   User requested simplified navigation: retain data, computed view and inline
   hashchange listener only. Removed dynamic tab titles, heading focus and listener
   cleanup; this shell stays mounted for the page lifetime. Unknown routes still
@@ -55,7 +55,15 @@
 
 ## UI epic plan
 
-F1 is accepted. F1.1 and F1.2 are agreed next submilestones, not yet implemented.
+F1 and F1.1 are accepted. User requested the F1.1 commit and F1.2 implementation.
+F1.1 extracts routeFromHash/viewForRoute into app/ui/routes.js, imported by the
+browser and Node tests. app.js now loads as a browser module. Added package.json
+with type=module and test:unit; no npm dependencies or application build step.
+Node 24.20.0/npm were already installed in the user's normal environment.
+Verification: 3 JS unit tests passed; 2 UI-serving tests passed (2 existing
+warnings). Local browser smoke verified rendering and navigation after module
+conversion. No Docker rebuild or full backend suite needed for this change.
+F1.1 accepted; proceeding to the agreed browser integration submilestone F1.2.
 Later scopes remain proposals to review one milestone at a time.
 Serve same-origin HTML/assets at /ui/ behind existing Nginx. Vue without a build
 step, minimal CSS, hash navigation, no external CDN at runtime. API client

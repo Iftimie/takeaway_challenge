@@ -1,29 +1,18 @@
 /* Hash navigation changes the view without reloading this page. */
-const views = {
-  '/restaurants': {
-    title: 'Restaurants',
-    description: 'Restaurant browsing will be available in the next UI milestone.',
-  },
-  '/login': {
-    title: 'Log in',
-    description: 'Login will be available in a later UI milestone.',
-  },
-};
+import { routeFromHash, viewForRoute } from './routes.js';
 
 Vue.createApp({
   data() {
-    return { route: window.location.hash.slice(1) || '/restaurants' };
+    return { route: routeFromHash(window.location.hash) };
   },
   computed: {
     view() {
-      return Object.hasOwn(views, this.route) ? views[this.route] : {
-        title: 'Page not found', description: 'Choose a page from the navigation.',
-      };
+      return viewForRoute(this.route);
     },
   },
   mounted() {
     window.addEventListener('hashchange', () => {
-      this.route = window.location.hash.slice(1) || '/restaurants';
+      this.route = routeFromHash(window.location.hash);
     });
   },
 }).mount('#app');

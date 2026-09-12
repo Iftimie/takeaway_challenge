@@ -951,6 +951,26 @@ missing schemas, and failures. No new dependencies or migrations.
 
 ## Project notes
 
+### JavaScript unit tests (F1.1)
+
+Use Node.js 22 or newer with npm (verified with Node 24.20.0). These are
+development tools only; the application still runs without Node or a build step.
+No `npm install` is needed yet because the unit tests use Node's built-in
+`node:test` and `node:assert/strict` modules with no external dependencies.
+
+From the repository root:
+
+```powershell
+npm run test:unit
+```
+
+Expected: 3 passed. If PowerShell blocks npm.ps1, use `npm.cmd run test:unit`.
+Tests cover empty hashes, known routes, and unknown routes (including inherited
+object property names). They import the same `app/ui/routes.js` used by the UI.
+`app.js` is loaded with `type="module"` so it can import these functions directly.
+No browser, running server or database is required for the unit tests.
+Browser automation setup belongs to F1.2; these tests do not test Vue rendering.
+
 ### UI shell (F1)
 
 Open http://localhost:8080/ui/ with Compose, or http://127.0.0.1:8000/ui/
