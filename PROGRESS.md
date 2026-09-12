@@ -195,7 +195,7 @@ still start with no orders. Verification: 29 JS unit tests and 2 UI-serving test
 passed, with the existing Python dependency warnings. All 11 browser tests passed
 (26.7s), including real history pagination/details/refresh/missing/logout checks.
 Compose rebuilt healthy; git diff --check passed. Stop for F8 review.
-F9 accepted; user requested commit and F10. Staff/admin see a Manage menu
+F9 accepted and committed as 6d3a931; user requested F10. Staff/admin see a Manage menu
 section below a restaurant's public menu. Create or select a current-page item
 to edit name, decimal-string price and availability. Saves reload that page;
 new items appear at the end of the existing two-item pagination. Form state is
@@ -211,6 +211,27 @@ availability persistence, unassigned denial and admin access.
 Verification: JS unit suite passed (32 tests); all 12 browser tests passed
 (32.0s), and 2 UI-serving tests passed. Existing dependency/color warnings remain.
 Compose rebuilt healthy. Stop for F9 review; no F9 commit requested yet.
+F10 accepted including URL pagination; user requested commit and F11. Manage orders link on restaurant
+menus for staff/admin opens /restaurants/{id}/orders hash view. Two orders per
+page, newest first; delivery details, purchased lines, totals and status shown.
+Explicit Refresh, empty/loading/error states and API assignment checks. Next-step
+buttons only: pending -> accepted -> out_for_delivery -> delivered. Server response
+replaces the order snapshot. Conflict/uncertain update blocks further changes
+until refresh; no automatic retries, polling, row locks or backend changes.
+Separate state per restaurant/account visit prevents late responses replacing a
+new view. Existing missing assignment-list API limitation remains as in F9.
+Verification: 36 JS unit tests, all 13 browser tests (31.6s) and 2 UI-serving tests
+passed. Real fixtures cover staff pagination, full status lifecycle, refresh
+persistence and unassigned denial. Existing dependency/color warnings remain.
+Compose rebuilt healthy; whitespace checks passed. Stop for F10 review.
+F10 review revision: user requested URL pagination for restaurant orders only.
+Next/Previous update the hash query (?page=2); browser reload and Back/Forward
+preserve page selection. Missing/invalid/out-of-range pages use page 1 (API offset
+limit 10000). Removed this view's Refresh button; errors ask for browser reload.
+Customer orders and other pagination remain unchanged. F10 still awaiting review.
+Revision verification: 37 JS unit tests passed; focused real-database browser
+test passed (14.0s), including page-2 reload and Back/Forward. Build and whitespace
+checks passed. No commit requested for this revision.
 F1.1 extracts routeFromHash/viewForRoute into app/ui/routes.js, imported by the
 browser and Node tests. app.js now loads as a browser module. Added package.json
 with type=module and test:unit; no npm dependencies or application build step.

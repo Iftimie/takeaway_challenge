@@ -1,4 +1,5 @@
 <script>
+import StaffOrdersView from './components/StaffOrdersView.vue';
 import MenuEditor from './components/MenuEditor.vue';
 import OrdersView from './components/OrdersView.vue';
 import CheckoutView from './components/CheckoutView.vue';
@@ -10,14 +11,14 @@ import LoginView from './components/LoginView.vue';
 import RestaurantList from './components/RestaurantList.vue';
 import MenuView from './components/MenuView.vue';
 /* Hash navigation changes the view without reloading this page. */
-import { routeFromHash, viewForRoute, menuRestaurantId, customerOrderId } from './routes.js';
+import { routeFromHash, viewForRoute, menuRestaurantId, customerOrderId, staffRestaurantId, staffOrdersPage } from './routes.js';
 import { menuState, loadMenu, canGoNextMenu } from './menu.js';
 import { PAGE_SIZE } from './api.js';
 import { restaurantState, canGoNext, loadRestaurants } from './restaurants.js';
 import { sessionState, login, logout, restoreSession } from './session.js';
 
 export default {
-  components: { LoginView, RestaurantList, MenuView, RegisterView, CartView, CheckoutView, OrdersView, MenuEditor },
+  components: { LoginView, RestaurantList, MenuView, RegisterView, CartView, CheckoutView, OrdersView, MenuEditor, StaffOrdersView },
   data() {
     return { route: routeFromHash(window.location.hash), restaurants: restaurantState(), pageSize: PAGE_SIZE, menu: menuState(0),
       session: sessionState(window.sessionStorage), email: '', password: '',
@@ -30,6 +31,8 @@ export default {
     hasNextPage() { return canGoNext(this.restaurants); },
     menuId() { return menuRestaurantId(this.route); },
     orderId() { return customerOrderId(this.route); },
+    staffRestaurantId() { return staffRestaurantId(this.route); },
+    staffPage() { return staffOrdersPage(this.route); },
     hasNextMenuPage() { return canGoNextMenu(this.menu); },
   },
   methods: {
@@ -129,6 +132,8 @@ export default {
     </header>
     <main>
       <h1>{{ view.title }}</h1>
+      <StaffOrdersView v-if="staffRestaurantId" :key="route" :session="session" :restaurant-id="staffRestaurantId" :page="staffPage" />
+      <p v-if="menuId && ['staff', 'admin'].includes(session.user?.role)"><a :href="`#/restaurants/${menuId}/orders`">Manage orders</a></p>
       <OrdersView v-if="route === '/orders' || orderId" :session="session" :order-id="orderId" />
       <p>{{ view.description }}</p>
       <p v-if="cartMessage" role="status">{{ cartMessage }}</p>

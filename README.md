@@ -1166,6 +1166,17 @@ See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
 milestones, and review status. Payload logging is accepted; the recorded
 performance/metrics scope decisions remain. Database backup implementation was
 explicitly skipped; backups remain a production consideration.
+## Restaurant orders (F10)
+
+As staff/admin, open a restaurant menu and choose **Manage orders**. The list
+shows two orders per page with delivery details and purchased items. Pagination
+is in the hash URL, such as `#/restaurants/3/orders?page=2`; browser reload keeps
+that page and Back/Forward navigates pages. Reload the browser to fetch updates.
+Missing or invalid page numbers fall back to page 1. Each order offers only its
+next permitted status; delivered orders have no further action. After a conflict
+or uncertain update, reload before trying again. The server restricts staff to
+assigned restaurants.
+
 ## Menu editing (F9)
 
 Log in as staff or admin, open a restaurant menu, and use **Manage menu** below

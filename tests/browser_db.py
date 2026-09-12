@@ -59,7 +59,7 @@ def fixtures(seed, orders=False, staff=False):
             session.add(StaffAssignment(staff_id=worker.id, restaurant_id=restaurants[0].id))
         if orders:
             session.flush()
-            customer = session.scalar(select(User))
+            customer = session.scalar(select(User).where(User.role == 'customer'))
             item = session.scalar(select(MenuItem).order_by(MenuItem.id))
             for index in range(3):
                 order = Order(customer_id=customer.id, restaurant_id=item.restaurant_id,
@@ -75,7 +75,7 @@ def fixtures(seed, orders=False, staff=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=['prepare', 'seed', 'seed-orders', 'seed-menu', 'clean', 'stop'])
+    parser.add_argument('action', choices=['prepare', 'seed', 'seed-orders', 'seed-menu', 'seed-staff-orders', 'clean', 'stop'])
     action = parser.parse_args().action
     if action == 'prepare':
         try:
@@ -87,4 +87,5 @@ if __name__ == '__main__':
     elif action == 'stop':
         compose('down')
     else:
-        fixtures(action in ('seed', 'seed-orders', 'seed-menu'), orders=action == 'seed-orders', staff=action == 'seed-menu')
+        fixtures(action.startswith('seed'), orders=action in ('seed-orders', 'seed-staff-orders'),
+                 staff=action in ('seed-menu', 'seed-staff-orders'))
