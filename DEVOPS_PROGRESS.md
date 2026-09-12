@@ -5,7 +5,8 @@
 - Status: D1-D8 accepted. User canceled D9; HTTPS is skipped. QA stays on public
   HTTP. All D9 code was reverted; QA renewal cron and certificate/challenge
   volumes removed, HTTP health verified. No HTTPS Terraform changes were applied.
-  D10 implemented, awaiting review and the first merged Actions deployment.
+  D10 accepted by user after reporting the run passed and QA still works.
+  D11 implemented, awaiting PR and first approved Actions production deployment.
 - Current design: [DEVOPS_DESIGN.md](DEVOPS_DESIGN.md). Region: `eu-north-1`.
   Repository: https://github.com/Iftimie/takeaway_challenge.
   D2 committed/pushed in 74bf7dc; user confirmed CI passed and waived the deliberate
@@ -81,8 +82,8 @@ of D1 and does not authorize creating AWS resources.
 | D7 | Reusable Lightsail Terraform, QA networking, Docker bootstrap and SSH deployment access. | Review plan/cost; generate/store SSH private key securely. | QA server starts; deployment access works; database not public. | Accepted by user; QA/prod bootstrap, SSH, Docker and firewall passed; production plan has no changes |
 | D8 | Deploy QA Compose stack, migrations, secrets and explicit sample-data setup. | Supply QA secrets/admin credentials securely. | QA works; app redeploy preserves DB; seeding is separate. | Accepted by user; QA manually verified |
 | D9 | IP-certificate issuance/renewal and HTTPS configuration. | Certificate contact email if needed. | Trusted QA HTTPS and verified renewal procedure. | Skipped at user request; attempted setup fully reverted |
-| D10 | Automatic QA deployment after successful CI, smoke checks and deployment serialization. | Merge/push approved change. | Tested image deployed to QA; clear failure/success result. | Implemented; merged Actions run pending |
-| D11 | Separate prod instance/database/secrets; promote QA image after approval. | Set prod secrets; approve first deployment. | Isolated prod, identical approved digest, HTTP/smoke checks pass. | Not started |
+| D10 | Automatic QA deployment after successful CI, smoke checks and deployment serialization. | Merge/push approved change. | Tested image deployed to QA; clear failure/success result. | Accepted by user; run passed and QA manually verified |
+| D11 | Separate prod instance/database/secrets; promote QA image after approval. | Set prod secrets; approve first deployment. | Isolated prod, identical approved digest, HTTP/smoke checks pass. | Implemented; Actions verification pending |
 | D12 | Bounded CloudWatch logs and agreed metrics labelled by environment. | Review metric set and retention. | QA/prod activity distinguishable; errors searchable by request ID. | Not started |
 | D13 | Single Terraform-managed dashboard for QA and prod. | Review usefulness during a demo. | Traffic/errors/latency/resources clearly visible for both. | Not started |
 | D14 | Environment-specific alarms and controlled failure/recovery checks. | Supply email and confirm AWS subscription. | Understandable failure notification and recovery verified. | Not started |
@@ -106,6 +107,20 @@ of D1 and does not authorize creating AWS resources.
 
 ## Latest verification
 
+- D11: generalized the existing helper to qa/prod, retaining separate SSH aliases
+  and Compose projects. Prod job runs after QA success and the existing approval,
+  deploys the same published digest, then public HTTP health/UI checks. App-only
+  releases also deploy; Terraform remains conditional. Eight local tests, actionlint
+  and shell syntax checks passed. No AWS commands or remote deployments were run.
+- User explicitly authorized code edits, local checks, commit/push and PR, with
+  deployment only through Actions. Before first run, user must set prod
+  SSH_KNOWN_HOSTS using the prepared ci-results/prod-pinned-hosts (earlier verified
+  server keys). Setup is in deploy/README.md. First prod deployment, digest match
+  and isolation/persistence verification remain pending; no acceptance recorded.
+
+- User reported the run passed, confirmed QA still works, and explicitly accepted
+  D10. This is user-confirmed verification; no additional GitHub polling performed.
+
 - D10: reusable publishing workflow exports its immutable digest. Merged QA job
   deploys that digest over pinned SSH, then checks public health and UI. App-only
   changes work when Terraform is skipped; infrastructure failures block deployment.
@@ -114,7 +129,7 @@ of D1 and does not authorize creating AWS resources.
   passed a live local-to-QA deployment and public smoke checks. Five focused tests,
   actionlint and whitespace checks passed. No Terraform resources changed; no plan
   needed. First merged Actions deployment remains unverified. User authorized commit,
-  push and PR on branch codex/d10-qa-deployment; implementation awaits review. Refresh the pinned host variable if QA is recreated.
+  push and PR on branch codex/d10-qa-deployment; D10 accepted by user. Refresh the pinned host variable if QA is recreated.
 
 - User approved D8, then canceled D9. Restored HTTP-only QA; health passed.
   Removed TLS config, renewal job and certificate/challenge volumes; retained DB.

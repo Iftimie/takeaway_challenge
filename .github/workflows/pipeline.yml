@@ -1,4 +1,4 @@
-name: PR checks and QA deployment
+name: PR checks and deployment
 
 on:
   pull_request:
@@ -184,12 +184,15 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$key"
           printf '%s\n' "$SSH_KNOWN_HOSTS" > "$known"
           ip=$(aws lightsail get-instance --instance-name takeaway-qa --query instance.publicIpAddress --output text)
-          python scripts/deploy_qa.py "$ip" "$IMAGE" "$key" "$known"
+          python scripts/deploy.py qa "$ip" "$IMAGE" "$key" "$known"
           printf '### QA deployed\nURL: http://%s/ui/\nImage: `%s`\n' "$ip" "$IMAGE" >> "$GITHUB_STEP_SUMMARY"
 
   prod-apply:
-    needs: [qa-apply, qa-deploy]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [changes, tests, qa-deploy]
+    if: >-
+      always() && !cancelled() &&
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.qa-deploy.result == 'success' && needs.tests.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     # Approval gates the entire production job, including its fresh plan.
@@ -204,6 +207,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/terraform-setup
+        if: needs.changes.outputs.infrastructure == 'true'
         with:
           environment: prod
       - name: Reject an outdated release
@@ -217,9 +221,28 @@ jobs:
             exit 1
           fi
       - name: Plan and apply production after approval
+        if: needs.changes.outputs.infrastructure == 'true'
         working-directory: infra/server
         run: |
           terraform plan -lock-timeout=60s -no-color -out=prod.tfplan
           terraform apply -lock-timeout=60s -no-color prod.tfplan
           ip=$(terraform output -raw public_ip)
           printf 'Production server: `%s` (cloud-init and SSH verification still required).\n' "$ip" >> "$GITHUB_STEP_SUMMARY"
+      - name: Deploy published digest and smoke test production
+        env:
+          IMAGE: ${{ needs.tests.outputs.image }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ vars.SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          key="$RUNNER_TEMP/prod-key"
+          known="$RUNNER_TEMP/prod-known-hosts"
+          trap 'rm -f "$key" "$known"' EXIT
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$known"
+          ip=$(aws lightsail get-instance --instance-name takeaway-prod --query instance.publicIpAddress --output text)
+          python scripts/deploy.py prod "$ip" "$IMAGE" "$key" "$known"
+          printf '### Production deployed\nURL: http://%s/ui/\nImage: `%s`\n' "$ip" "$IMAGE" >> "$GITHUB_STEP_SUMMARY"

@@ -7,6 +7,8 @@ if [[ ! "$image" =~ ^ghcr\.io/iftimie/takeaway_challenge@sha256:[a-f0-9]{64}$ ]]
   echo 'Expected an immutable takeaway image digest.' >&2
   exit 1
 fi
+environment=${2:-qa}
+case "$environment" in qa|prod) ;; *) echo "Use qa or prod" >&2; exit 1 ;; esac
 umask 077
 if [ ! -f .env ]; then
   # Keep these values across redeployments: Postgres initializes its password once.
@@ -18,7 +20,7 @@ if [ ! -f .env ]; then
   mv .env.tmp .env
 fi
 export APP_IMAGE="$image"
-compose=(docker compose --project-name takeaway-qa --env-file .env -f compose.yaml)
+compose=(docker compose --project-name "takeaway-$environment" --env-file .env -f compose.yaml)
 "${compose[@]}" pull
 "${compose[@]}" up -d --wait db
 # Always run migrations, including when Compose could reuse an exited container.
@@ -27,4 +29,4 @@ compose=(docker compose --project-name takeaway-qa --env-file .env -f compose.ya
 # Recreate Nginx so it resolves the current app container before its health check.
 "${compose[@]}" up -d --no-deps --force-recreate --wait nginx
 printf '%s\n' "$image" > current-image
-echo 'QA deployment completed. Nginx listens on port 80.'
+echo "$environment deployment completed. Nginx listens on port 80."

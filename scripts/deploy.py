@@ -1,4 +1,4 @@
-"""Deploy a published digest over verified SSH, then check QA over public HTTP."""
+"""Deploy a published digest over verified SSH, then check the environment over public HTTP."""
 import ipaddress
 import json
 from pathlib import Path
@@ -10,20 +10,22 @@ import urllib.error
 import urllib.request
 
 
-def deploy(ip, image, key, known_hosts):
+def deploy(environment, ip, image, key, known_hosts):
+    if environment not in ("qa", "prod"):
+        raise ValueError("Use qa or prod")
     ip = str(ipaddress.IPv4Address(ip))
     if not re.fullmatch(r'ghcr\.io/iftimie/takeaway_challenge@sha256:[a-f0-9]{64}', image):
         raise ValueError('Expected the immutable published takeaway image digest')
     root = Path(__file__).resolve().parents[1]
     options = ['-i', key, '-o', 'BatchMode=yes', '-o', 'IdentitiesOnly=yes',
-               '-o', 'StrictHostKeyChecking=yes', '-o', 'HostKeyAlias=takeaway-qa',
+               '-o', 'StrictHostKeyChecking=yes', '-o', f'HostKeyAlias=takeaway-{environment}',
                '-o', f'UserKnownHostsFile={known_hosts}', '-o', 'ConnectTimeout=15']
     target = f'deploy@{ip}'
     files = [str(root / 'deploy' / name) for name in
              ('compose.yaml', 'nginx.conf', 'deploy.sh')]
     subprocess.run(['scp', *options, *files, f'{target}:/opt/takeaway/'], check=True)
     subprocess.run(['ssh', *options, target,
-                    f'cd /opt/takeaway && bash deploy.sh {image}'], check=True)
+                    f'cd /opt/takeaway && bash deploy.sh {image} {environment}'], check=True)
     for path in ('/health', '/ui/'):
         for attempt in range(10):
             try:
@@ -38,10 +40,10 @@ def deploy(ip, image, key, known_hosts):
                 if attempt == 9:
                     raise
                 time.sleep(3)
-    print(f'QA smoke checks passed: http://{ip}/ui/ ({image})')
+    print(f'{environment} smoke checks passed: http://{ip}/ui/ ({image})')
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 5:
-        raise SystemExit('Usage: deploy_qa.py IP IMAGE SSH_KEY KNOWN_HOSTS')
+    if len(sys.argv) != 6:
+        raise SystemExit('Usage: deploy.py ENVIRONMENT IP IMAGE SSH_KEY KNOWN_HOSTS')
     deploy(*sys.argv[1:])
