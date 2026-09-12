@@ -7,7 +7,7 @@ Terraform does not use the SSH_PRIVATE_KEY secrets; server login/deployment will
 | Event | Pipeline |
 |---|---|
 | PR opened, reopened or updated against main | Python/JS/browser tests; QA Terraform plan |
-| PR merged into main | Tests and image publishing; fresh QA plan/apply; production approval; fresh prod plan/apply |
+| PR merged into main | Tests and image publishing; fresh QA plan/apply when needed; QA app deployment/smoke checks; production approval; fresh prod plan/apply |
 | PR closed without merging or push without a PR | No automatic pipeline |
 
 Post-merge execution uses push on main, not the pull_request closed event, so
@@ -47,7 +47,18 @@ during each Terraform operation. If main changes while approval is pending, the
 production job stops; run the latest appropriate merged-PR workflow and approve
 again. Preserve state after failures; partial resources may exist and incur charges.
 
-This pipeline provisions servers only. D8 adds manual QA app deployment using
-[deploy/README.md](../../deploy/README.md); automation remains D10. Successful
-Terraform apply is not an app health check. Branch protection/required checks
-remain separate repository settings.
+QA application deployment runs for every verified merged PR after publishing,
+including application-only changes where Terraform is skipped. It copies the
+small deployment bundle over SSH and uses the immutable digest returned by the
+publishing job. Health and UI checks use QA's public HTTP address. Failure prevents
+production infrastructure promotion. Production application deployment remains D11.
+
+QA uses existing AWS/SSH secrets plus SSH_KNOWN_HOSTS, a public variable containing
+AWS-verified host keys under alias takeaway-qa. It is configured for the current
+server. If Terraform recreates QA, refresh this variable using host keys returned
+by the authenticated Lightsail get-instance-access-details API before redeploying.
+A changed key fails closed; do not disable host verification or blindly trust a scan.
+
+Merged runs remain serialized by the existing pipeline concurrency group. Manual
+local deployments should not run alongside Actions. No sample reset runs in CI.
+The existing database volume and server-generated secrets remain in place.

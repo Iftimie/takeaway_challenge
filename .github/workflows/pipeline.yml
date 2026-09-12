@@ -1,4 +1,4 @@
-name: PR checks and infrastructure promotion
+name: PR checks and QA deployment
 
 on:
   pull_request:
@@ -150,8 +150,45 @@ jobs:
           ip=$(terraform output -raw public_ip)
           printf 'QA server: `%s` (cloud-init and SSH verification still required).\n' "$ip" >> "$GITHUB_STEP_SUMMARY"
 
+  qa-deploy:
+    needs: [changes, tests, qa-apply]
+    if: >-
+      always() && !cancelled() &&
+      needs.changes.outputs.release == 'true' &&
+      needs.tests.result == 'success' &&
+      (needs.qa-apply.result == 'success' ||
+       (needs.changes.outputs.infrastructure == 'false' && needs.qa-apply.result == 'skipped'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: qa
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Deploy published digest and smoke test QA
+        env:
+          IMAGE: ${{ needs.tests.outputs.image }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ vars.SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          key="$RUNNER_TEMP/qa-key"
+          known="$RUNNER_TEMP/qa-known-hosts"
+          trap 'rm -f "$key" "$known"' EXIT
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$known"
+          ip=$(aws lightsail get-instance --instance-name takeaway-qa --query instance.publicIpAddress --output text)
+          python scripts/deploy_qa.py "$ip" "$IMAGE" "$key" "$known"
+          printf '### QA deployed\nURL: http://%s/ui/\nImage: `%s`\n' "$ip" "$IMAGE" >> "$GITHUB_STEP_SUMMARY"
+
   prod-apply:
-    needs: qa-apply
+    needs: [qa-apply, qa-deploy]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 20

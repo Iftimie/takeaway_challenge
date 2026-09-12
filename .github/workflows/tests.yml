@@ -8,6 +8,11 @@ on:
         type: boolean
         default: false
 
+    outputs:
+      image:
+        description: Immutable published image reference
+        value: ${{ jobs.publish.outputs.image }}
+
 permissions:
   contents: read
 
@@ -78,6 +83,8 @@ jobs:
 
   publish:
     name: Publish tested image
+    outputs:
+      image: ${{ steps.image.outputs.reference }}
     needs: tests
     if: inputs.publish
     runs-on: ubuntu-24.04
@@ -101,6 +108,7 @@ jobs:
           GH_USER: ${{ github.actor }}
         run: echo "$GH_TOKEN" | docker login ghcr.io --username "$GH_USER" --password-stdin
       - name: Push and record digest
+        id: image
         env:
           COMMIT_SHA: ${{ github.sha }}
         run: |
@@ -108,6 +116,7 @@ jobs:
           docker push "$image"
           reference=$(docker inspect --format '{{index .RepoDigests 0}}' "$image")
           test -n "$reference"
+          echo "reference=$reference" >> "$GITHUB_OUTPUT"
           echo "### Published tested image" >> "$GITHUB_STEP_SUMMARY"
           echo "Commit: $COMMIT_SHA" >> "$GITHUB_STEP_SUMMARY"
           echo "Pull/deploy reference: \`$reference\`" >> "$GITHUB_STEP_SUMMARY"

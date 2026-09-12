@@ -2,7 +2,8 @@
 
 Copy this directory to `/opt/takeaway` on QA, then run `bash deploy.sh IMAGE`,
 using the immutable GHCR digest from the successful publishing job. Deployment
-is manual in D8; GitHub deployment automation comes in D10.
+is now automatic after a verified PR merge (D10). The same script remains
+available for local debugging. Do not run it concurrently with Actions.
 
 The script generates `.env` with random database/JWT secrets on its first run.
 It preserves that file and the named PostgreSQL volume on subsequent runs.
