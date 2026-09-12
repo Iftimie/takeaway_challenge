@@ -137,12 +137,12 @@ export default {
     </header>
     <main>
       <h1>{{ view.title }}</h1>
+      <p>{{ view.description }}</p>
       <StaffAdminView v-if="route === '/staff'" :key="session.user?.id" :session="session" />
       <RestaurantCreateView v-if="route === '/restaurants/new'" :key="session.user?.id" :session="session" @created="restaurantCreated" />
       <StaffOrdersView v-if="staffRestaurantId" :key="route" :session="session" :restaurant-id="staffRestaurantId" :page="staffPage" />
       <p v-if="menuId && ['staff', 'admin'].includes(session.user?.role)"><a :href="`#/restaurants/${menuId}/orders`">Manage orders</a></p>
       <OrdersView v-if="route === '/orders' || orderId" :session="session" :order-id="orderId" />
-      <p>{{ view.description }}</p>
       <p v-if="cartMessage" role="status">{{ cartMessage }}</p>
       <p v-if="checkout.pending && route !== '/checkout'"><a href="#/checkout">Return to saved checkout</a></p>
       <CheckoutView v-if="route === '/checkout'" :checkout="checkout" :session="session" :cart="cart" @submit="submitOrder" />

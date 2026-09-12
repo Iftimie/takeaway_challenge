@@ -7,6 +7,25 @@ Public restaurant browsing uses `GET /restaurants` and `GET /restaurants/{id}`.
 `GET /health` returns HTTP 200 with
 `{"status":"ok"}` and checks application liveness, not database readiness.
 
+## Full UI demo
+
+```powershell
+npm run test:demo
+npm run trace
+```
+
+The demo always records a trace, with numbered steps for admin creation and
+assignment, staff menu creation, customer checkout, staff delivery progression,
+and the customer's final order check. Select the `demo-admin-staff-customer-...`
+trace in the picker. All actions use the real UI/API. Setup seeds prerequisite
+accounts in the disposable test DB; the test creates two restaurants, two staff,
+three menu items and an order. Cleanup removes its data afterward.
+
+To watch Chromium live: `npm run test:demo -- --headed`. To step through actions
+at your own pace: `npm run test:demo -- --debug`. The test also runs in the normal
+browser suite. `UI_TEST_COMPOSE=1` selects isolated Nginx mode as documented below;
+an external `UI_BASE_URL` skips this destructive-fixture demo.
+
 ## Setup (Windows PowerShell)
 
 Requires Python 3.11 or newer. Run commands from the project root:
@@ -1219,6 +1238,33 @@ request, including after refresh. Cart editing pauses until it is resolved.
 Signing out retains an unresolved checkout; only its original customer can retry
 it. Closing the tab loses this recovery state. Successful confirmation is shown
 in memory; completed orders remain available under My orders. No payment or automatic retry is added.
+
+## Destructive demo database reset
+
+`scripts/reset_demo_db.py` targets the normal `.env`/environment database. It
+deletes **all application records**, including existing admins, then creates
+sample data. It preserves the schema, Alembic version and ID sequences. Run from
+the repository root against a migrated database, while no requests are writing:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/reset_demo_db.py --yes-delete-all-data
+```
+
+All demo accounts use password `Demo-password-123!`:
+
+| Email | Role / sample access |
+|---|---|
+| admin@example.com | Admin, all restaurants |
+| staff@example.com | Staff, Corner Pizza |
+| staff2@example.com | Staff, Green Bowl |
+| customer@example.com | Customer, four orders in different statuses |
+| customer2@example.com | Customer, one order |
+
+There are three restaurants with four menu items each (one unavailable per menu),
+two staff assignments, and five orders with purchased lines. Repeating the command
+replaces the data again. Deletes/inserts share one transaction and roll back on
+failure. Clear browser sessionStorage and reload afterward to discard old tokens,
+carts and pending checkouts. These published demo passwords are for local use.
 
 ## UI review and Nginx browser checks (F13)
 

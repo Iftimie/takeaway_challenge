@@ -256,7 +256,7 @@ then logs in as that staff member and successfully edits the assigned menu.
 Verification: 45 JS unit tests, all 15 browser tests (38.9s) and 2 UI-serving tests
 passed. Compose rebuilt healthy. Existing dependency/color warnings remain.
 Stop for F12 review; no F12 commit requested yet.
-F13 accepted; user requested commit and a simple CSS improvement milestone. Added optional UI_TEST_COMPOSE=1
+F13 accepted and committed as db0b827; user requested a simple CSS improvement milestone. Added optional UI_TEST_COMPOSE=1
 browser mode using the production Dockerfile/Nginx config and the existing
 disposable DB. Test app/nginx services use profile full, distinct image tag,
 localhost 8877; teardown removes the complete test project. UI_BASE_URL cannot be
@@ -269,6 +269,40 @@ and the normal app/nginx/db remained healthy. git diff --check passed. Unit and
 backend suites were not repeated for this test-tooling/documentation milestone.
 F13 completes the planned UI epic subject to user review; no next milestone is
 automatically authorized. Stop for review; F13 remains uncommitted.
+F14 (user-requested simple styling) implemented, awaiting review; uncommitted.
+Shared CSS adds neutral background/white sections, clear headings, consistent
+form sizing/spacing, list separators, buttons, disabled/error/status/focus states
+and wrapping navigation for narrow screens. No CSS framework or dependencies.
+One template adjustment places page descriptions before their content. No feature
+or API behavior changes. Existing 15 browser tests passed (39.5s), 2 UI-serving
+tests passed. Desktop and 390px admin-form screenshots inspected; no horizontal
+overflow. Visual admin identity was mocked; no real data created for screenshots.
+No new tests for this presentation-only change; unit/backend suites not repeated.
+Final Docker rebuild healthy including description placement and form separation;
+whitespace checks passed. Stop for F14 review; styling remains uncommitted.
+User requested a separate fully destructive sample-data script. Added
+scripts/reset_demo_db.py targeting normal Settings (.env/environment), explicitly
+invoked with --yes-delete-all-data. Deletes every application record and seeds
+5 users, 3 restaurants, 12 menu items, 2 assignments, 5 orders and 10 order lines.
+Schema/migration state and ID sequences remain intact. One transaction rolls
+back deletions and inserts on failure. Known local demo credentials documented.
+Existing browser_db.py remains isolated. Tested only on disposable DB: 2 tests
+passed (2 existing dependency warnings), covering flag requirement, repeat reset,
+counts, password hashes, totals, statuses and rollback preserving old data.
+Disposable DB removed. Normal database was NOT reset. Script uncommitted,
+awaiting review; earlier styling remains uncommitted as well.
+User requested a single full demo Playwright journey. Added demo.spec.js with
+numbered test.step groups: admin login/list/create two restaurants/create and
+assign two staff; staff #1 creates three menu items; customer buys two distinct
+items/checks out/checks pending order; staff advances that same order through all
+statuses; customer checks delivered order and reload persistence. All business
+actions use UI, no mocked responses. Existing isolated seed-menu supplies initial
+admin/customer and sample list; finally cleanup removes fixtures. No normal DB use.
+Added npm run test:demo (build + targeted test + trace on), documented trace,
+headed and debug commands. Browser test title/steps use dashes. Verification:
+demo passed (17.3s total, 6.4s test), trace retained. No application changes.
+User accepted and requested committing the pending styling, reset script and demo
+work. Next topic is CI/CD, deployment options and monitoring; discussion only.
 F1.1 extracts routeFromHash/viewForRoute into app/ui/routes.js, imported by the
 browser and Node tests. app.js now loads as a browser module. Added package.json
 with type=module and test:unit; no npm dependencies or application build step.
