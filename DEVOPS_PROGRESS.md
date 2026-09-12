@@ -2,15 +2,9 @@
 
 ## Resume here
 
-- Status: D1-D8 accepted. User canceled D9; HTTPS is skipped. QA stays on public
-  HTTP. All D9 code was reverted; QA renewal cron and certificate/challenge
-  volumes removed, HTTP health verified. No HTTPS Terraform changes were applied.
-  D10 accepted by user after reporting the run passed and QA still works.
-  D11 accepted by user. D12 inspection started; user approved reuse of existing QA/prod credentials for publishing logs.
-  Narrow publishing policies attached; D12 code prepared and locally tested.
-  Exact monitoring-management policies approved, attached and verified.
-  User authorized D12 commit/push/PR on codex/d12-cloudwatch.
-  Live Actions log/metric verification remains pending.
+- Status: D1-D8 and D10-D12 accepted. D9 HTTPS canceled. D13 dashboard prepared,
+  dashboard IAM permission approved, attached and verified; user authorized commit/push/PR; live dashboard check pending.
+  One shared dashboard is owned by QA monitoring state, displaying both environments.
 - Current design: [DEVOPS_DESIGN.md](DEVOPS_DESIGN.md). Region: `eu-north-1`.
   Repository: https://github.com/Iftimie/takeaway_challenge.
   D2 committed/pushed in 74bf7dc; user confirmed CI passed and waived the deliberate
@@ -88,8 +82,8 @@ of D1 and does not authorize creating AWS resources.
 | D9 | IP-certificate issuance/renewal and HTTPS configuration. | Certificate contact email if needed. | Trusted QA HTTPS and verified renewal procedure. | Skipped at user request; attempted setup fully reverted |
 | D10 | Automatic QA deployment after successful CI, smoke checks and deployment serialization. | Merge/push approved change. | Tested image deployed to QA; clear failure/success result. | Accepted by user; run passed and QA manually verified |
 | D11 | Separate prod instance/database/secrets; promote QA image after approval. | Set prod secrets; approve first deployment. | Isolated prod, identical approved digest, HTTP/smoke checks pass. | Accepted by user; production run and verification confirmed |
-| D12 | Bounded CloudWatch logs and agreed metrics labelled by environment. | Review metric set and retention. | QA/prod activity distinguishable; errors searchable by request ID. | Implemented locally; management permissions and live verification pending |
-| D13 | Single Terraform-managed dashboard for QA and prod. | Review usefulness during a demo. | Traffic/errors/latency/resources clearly visible for both. | Not started |
+| D12 | Bounded CloudWatch logs and agreed metrics labelled by environment. | Review metric set and retention. | QA/prod activity distinguishable; errors searchable by request ID. | Accepted by user; logs/metrics verified |
+| D13 | Single Terraform-managed dashboard for QA and prod. | Review usefulness during a demo. | Existing traffic/errors/latency metrics clearly visible for both. | Implemented locally; IAM approval and live verification pending |
 | D14 | Environment-specific alarms and controlled failure/recovery checks. | Supply email and confirm AWS subscription. | Understandable failure notification and recovery verified. | Not started |
 | D15 | Ordered complete teardown and recreation rehearsal, including bootstrap/state cleanup. | Authorize destructive rehearsal; confirm disposable data. | No remaining created billable resources; successful recreation. | Not started |
 | D16 | Failed deployment and previous-image rollback rehearsal; final runbook. | Review final operations demo. | Deploy/approve/recover/clean up demonstrated; migration rollback limits documented. | Not started |
@@ -110,6 +104,16 @@ of D1 and does not authorize creating AWS resources.
 - Backend dependency ranges are not fully locked; review reproducibility in CI.
 
 ## Latest verification
+
+- User approved the exact QA dashboard policy. Attached as inline TakeawayDashboard
+  to github-actions-qa; AWS readback matched the file. No dashboard apply or push.
+
+- User accepted D12 after inspecting metrics and correcting the console statistic
+  to Sum. D13 prepared: shared takeaway dashboard, three one-minute graphs showing
+  QA and prod, counts use Sum and latency Average. QA state is sole owner.
+  Terraform validation and all four mock tests pass. No AWS apply/permissions changed,
+  no commit/push. Exact qa-dashboard-permissions.json needs approval before attach.
+  Only existing metrics are shown; server capacity collection is not introduced.
 
 - User explicitly approved both monitoring-management JSON policies. Attached
   each as inline TakeawayMonitoring to its existing QA/prod user; AWS readback
