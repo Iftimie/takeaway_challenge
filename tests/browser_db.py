@@ -21,7 +21,9 @@ from app.auth.service import password_hasher
 
 
 def compose(*args):
-    subprocess.run(['docker', '--context', 'desktop-linux', 'compose', '-p',
+    # Windows uses Docker Desktop; Linux CI uses its active Docker context.
+    context = os.environ.get('DOCKER_CONTEXT', 'desktop-linux' if sys.platform == 'win32' else '')
+    subprocess.run(['docker', *(['--context', context] if context else []), 'compose', '-p',
                     'takeaway-browser-tests', '-f', str(ROOT / 'compose.browser-tests.yaml'),
                     *args], cwd=ROOT, check=True)
 

@@ -1,0 +1,122 @@
+# Deployment design
+
+Status: D1 accepted by the user on 2026-09-12. No infrastructure created.
+Milestone status and next actions live in [DEVOPS_PROGRESS.md](DEVOPS_PROGRESS.md).
+
+## Purpose and boundaries
+
+Run QA and prod for short development/demo sessions, usually 1–2 days, then
+destroy everything created for this deployment. Both databases are disposable.
+This extends the challenge with deployment practice; it is not a highly available
+production architecture. Each environment depends on a single server.
+
+Use two AWS Lightsail Linux instances, initially proposing 2 GB RAM each.
+Each runs Docker Compose with Nginx, the existing FastAPI/Uvicorn application
+(including the built Vue UI), and PostgreSQL with a local persistent volume.
+QA and prod have separate servers, databases, passwords, JWT secrets and SSH keys.
+Redeploying the application preserves its database; teardown deletes it.
+
+AWS region: `eu-north-1` (user selected).
+Repository: https://github.com/Iftimie/takeaway_challenge (user supplied; intended public).
+No Git remote was configured when D1 was inspected; recording this URL does not configure it.
+
+## Request and release flow
+
+Browser -> environment public IP over HTTPS -> Nginx -> app -> PostgreSQL.
+Only web ports are public; SSH access is controlled separately. Neither Uvicorn
+nor PostgreSQL needs a public port. The UI and API share an origin.
+Use trusted IP certificates with automated renewal, subject to D9 verification.
+No domain, load balancer, managed database or Kubernetes is planned.
+
+GitHub Actions runs Python, JavaScript and browser tests using a disposable test
+database. A successful run builds and publishes an image to ECR. QA deploys it
+and runs smoke checks. A GitHub production environment approval then permits
+deploying the same image digest to prod. A digest identifies the exact image
+contents, so approval cannot accidentally promote a different build.
+
+GitHub uses AWS OIDC for temporary AWS access and separate environment SSH keys
+to deploy to the servers. Infrastructure changes use reviewed Terraform plans;
+ordinary application deployment does not recreate infrastructure. Serialize
+deployments per environment. Run migrations before starting the updated app.
+Sample-data reset remains an explicit destructive action, never a deployment step.
+
+## Resource ownership and proposed names
+
+Terraform owns AWS resources; Compose owns containers and database volumes;
+GitHub settings own approvals and secret storage. Never put secret values in Git.
+Use `Project=takeaway`, `Environment=qa|prod|shared` and `ManagedBy=terraform`
+tags where supported. Names below are proposals, not existing resources.
+
+| Group | Resources | Naming / state boundary |
+|---|---|---|
+| Bootstrap | Private encrypted, versioned S3 state bucket with state locking | `takeaway-tfstate-<account-id>-<region>`; separate bootstrap state |
+| Shared delivery | ECR repository, GitHub OIDC provider if project-owned, scoped IAM roles/policies | ECR `takeaway-service`; `shared/terraform.tfstate` |
+| QA | Lightsail instance, firewall rules, SSH public key and any explicitly allocated IP | `takeaway-qa`; `qa/terraform.tfstate` |
+| Prod | Equivalent independent resources | `takeaway-prod`; `prod/terraform.tfstate` |
+| Monitoring | Log groups, metric definitions/filters as needed, one dashboard, per-environment alarms, SNS email notifications | Logs `/takeaway/qa/app`, `/takeaway/prod/app`; dashboard `takeaway`; `monitoring/terraform.tfstate` |
+
+Do not create snapshots, extra disks or static IPs unless a later milestone
+demonstrates a need. Record any addition in the inventory and cleanup procedure.
+Reuse of an existing account resource must be explicit: teardown must not delete
+resources owned by another project.
+
+S3 state uses encryption, restricted access, versioning and locking. Bootstrap
+initially needs local state before the bucket exists; migrate it to S3 once ready.
+At final teardown, move bootstrap state back to a protected local location before
+deleting its bucket. Never erase the only usable state while cleanup is incomplete.
+
+## Monitoring and costs
+
+One CloudWatch dashboard displays QA and prod side by side. Start with a small
+set covering requests, errors, latency and server capacity; select exact signals,
+retention and thresholds in D12–D14. Keep environment labels, avoid per-user or
+per-request metric dimensions, and preserve existing log redaction.
+
+The earlier $25–35/month estimate for both environments is a planning allowance,
+not a quote. Confirm regional prices, service eligibility and credit expiry before
+provisioning. Short runtime reduces server charges; retained resources can still
+cost money. The user's $100 credit is not a spending cap.
+
+## Complete teardown policy
+
+1. Prevent new deployments and stop monitoring publishers/collectors so they
+   cannot recreate log groups or continue sending data.
+2. Remove alarms, notifications, dashboard, metric filters and log groups before
+   removing the application servers.
+3. Destroy QA/prod servers and their disposable data; release any allocated IPs,
+   disks, keys and snapshots created for the project.
+4. Remove images/ECR and project-owned delivery IAM/OIDC resources. Remove
+   obsolete deployment secrets from GitHub through the appropriate owner.
+5. Verify earlier cleanup succeeded, preserve bootstrap state locally, then remove
+   every S3 object version/delete marker and the state bucket last.
+6. Check the resource inventory for leftovers. If any deletion fails, retain state
+   and finish cleanup before declaring teardown complete.
+
+Exception to literal deletion of everything: CloudWatch does not offer deletion
+of metric history. Stop publishing; retained metric data expires automatically
+after 15 months. This is separate from deleting alarms, logs and dashboards.
+See [AWS metric lifecycle documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html).
+
+## Decisions to resolve before affected implementation
+
+- Verify regional service availability
+  and pricing for `eu-north-1` before provisioning.
+- D5: choose the production approver and ensure a sole operator is not blocked
+  by a rule preventing self-approval.
+- D7/D12: settle server authentication for private ECR pulls and CloudWatch
+  publishing. GitHub OIDC authenticates the workflow, not the running server;
+  do not assume the server inherits that identity. Also settle SSH firewall access
+  for GitHub runners and verify the server host key.
+- D9: verify the certificate client, IP issuance and automatic renewal before
+  claiming trusted HTTPS works.
+- D12–D14: choose the small metric set, retention, thresholds and notification email.
+- D16: an older image may not work with a newer database schema; rollback must
+  document migration compatibility rather than promise automatic database reversal.
+
+## Existing configuration implications
+
+The current Compose file builds locally, publishes Nginx on localhost:8080 and
+exposes PostgreSQL on localhost for developer tools. Later deployment configuration
+must pull the approved image digest, expose web traffic appropriately and keep the
+database internal. Current Nginx configuration is HTTP-only. No changes to these
+files are part of D1.

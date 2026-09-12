@@ -1,0 +1,67 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # Disposable test database only; no deployment secrets are needed.
+      POSTGRES_DB: takeaway_browser_test
+      POSTGRES_USER: browser_test
+      POSTGRES_PASSWORD: browser_test_only
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: '55432'
+      JWT_SECRET: browser-test-only-jwt-key-not-for-production
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies and build UI
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install '.[test]'
+          npm ci
+          npm run build
+          npx playwright install --with-deps chromium
+      - name: Start disposable PostgreSQL and migrate
+        run: .venv/bin/python tests/browser_db.py prepare
+      - name: Python tests (including database integration)
+        run: .venv/bin/python -m pytest -q --tb=short --junitxml=ci-results/pytest.xml
+      - name: JavaScript unit tests
+        run: npm run test:unit
+      - name: Browser tests through Docker and Nginx
+        env:
+          UI_TEST_COMPOSE: '1'
+        run: npm run test:browser
+      - name: Remove disposable test stack
+        if: always()
+        run: docker compose -p takeaway-browser-tests -f compose.browser-tests.yaml --profile full down --volumes --remove-orphans
+      - name: Upload failure reports and browser traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-failure-reports
+          path: |
+            ci-results/
+            playwright-report/
+            test-results/
+          retention-days: 7

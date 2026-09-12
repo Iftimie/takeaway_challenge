@@ -2,7 +2,8 @@
 
 This is a take-home backend challenge being built incrementally for learning.
 
-- Read `PROGRESS.md` before starting work. Inspect the relevant code and tests to
+- For DevOps work, read `DEVOPS_PROGRESS.md` instead of the long application history.
+  For application/UI work, read `PROGRESS.md`. Inspect the relevant code and tests to
   verify the recorded state before resuming.
 - Work on one agreed milestone at a time. Keep changes small and easy to review.
 - Explain significant choices and unfamiliar concepts in plain language.
@@ -13,7 +14,7 @@ This is a take-home backend challenge being built incrementally for learning.
 - Do not add optional features or unrelated refactors.
 - Flag conflicting requirements and unresolved decisions before implementing
   the affected behavior. Distinguish source requirements from proposed choices.
-- At the end of each milestone, update `PROGRESS.md`, summarize changes,
+- At the end of each milestone, update the relevant progress file, summarize changes,
   verification, and limitations, then stop for user review.
 - Keep "implemented, awaiting review" separate from "accepted". Only record
   acceptance when the user provides it. Do not automatically start the next

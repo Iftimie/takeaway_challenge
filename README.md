@@ -1306,3 +1306,29 @@ Current limitations:
   the result before retrying. No payments or cancellation actions are added.
 - Restaurant IDs and raw server timestamps are displayed. Unsaved forms are
   discarded on navigation. Styling remains minimal; deployment uses local HTTP.
+
+## GitHub Actions tests (D2)
+
+`.github/workflows/tests.yml` runs on pushes, pull requests and manual dispatch.
+One Ubuntu job installs Python 3.11 and Node 24, builds the UI, starts disposable
+PostgreSQL and applies migrations, then runs all Python tests, JavaScript unit
+tests and Chromium browser tests through Docker/Nginx. A failing step stops later
+test steps; cleanup always runs. No AWS or deployment secrets are required.
+
+The browser database helper uses Docker Desktop on Windows and the active Docker
+context on Linux. Set `DOCKER_CONTEXT` to override this selection. The fixed test
+database credentials and port remain unchanged; this does not use the normal DB.
+
+After pushing the workflow, open the repository's **Actions -> Tests** run.
+On failure, download the `test-failure-reports` artifact (retained for seven days).
+Extract it and run `npx playwright show-report <path-to-playwright-report>` to
+inspect browser failures and their traces. Python results are in
+`ci-results/pytest.xml`; command output is also available in the failed step's log.
+If failure happens before browser tests start, there will be no browser report.
+Artifacts contain only synthetic test data; never point this workflow at QA/prod.
+
+CI rejects accidentally committed `test.only` calls. JavaScript dependencies use
+the existing lockfile; Python dependencies still use the ranges in `pyproject.toml`,
+so Python installs are not fully pinned. No deployment or image publishing occurs
+in this workflow. The first GitHub run and artifact download must be verified after
+the reviewed changes are pushed.

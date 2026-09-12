@@ -1,5 +1,8 @@
 # Project checkpoint
 
+DevOps planning and milestone tracking now live in [DEVOPS_PROGRESS.md](DEVOPS_PROGRESS.md).
+For DevOps work, use that compact checkpoint; this file is historical app/UI context.
+
 ## Current state
 
 - Continuity setup: accepted by the user's request to start milestone 1.

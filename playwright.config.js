@@ -11,7 +11,8 @@ export default defineConfig({
   globalSetup: './tests/ui-browser/database.js',
   workers: 1,
   retries: 0,
-  reporter: 'list',
+  forbidOnly: !!process.env.CI,
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: externalURL || localURL,
     browserName: 'chromium',
