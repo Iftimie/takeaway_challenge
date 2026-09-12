@@ -1,7 +1,7 @@
 <script>
 export default {
   props: ['menu', 'pageSize', 'hasNextMenuPage'],
-  emits: ['load-page'],
+  emits: ['load-page', 'add-item'],
 };
 </script>
 
@@ -20,6 +20,7 @@ export default {
         <li v-for="item in menu.items" :key="item.id">
           <strong>{{ item.name }}</strong> — {{ item.price }} {{ item.currency }}
           <span>{{ item.available ? 'Available' : 'Unavailable' }}</span>
+          <button :disabled="!item.available" @click="$emit('add-item', item)">Add {{ item.name }}</button>
         </li>
       </ul>
     </template>

@@ -134,7 +134,7 @@ Browser/trace npm commands build first. Verification: build, 13 unit tests and
 Multi-stage Docker rebuild healthy; 4 browser checks passed through Nginx,
 3 isolated-DB tests skipped as designed. F4 approved for commit, including Vue SFC
 build refactor. F4 committed as 2ec3b7b.
-F5 accepted; user requested commit. RegisterView.vue and /register hash route,
+F5 accepted and committed as cf328c9. RegisterView.vue and /register hash route,
 customer email/password/name/optional address form. Uses existing API; explicit
 payload excludes roles. Field validation, duplicate email, network/failure and
 success feedback; success links to login without automatic authentication.
@@ -148,6 +148,18 @@ F5 follow-up verification: 2 UI-serving tests passed (2 existing warnings),
 Docker Compose rebuild completed healthy and git diff --check passed.
 F6 authorized: cart uses sessionStorage to survive refresh, as requested. Backend
 limits are 100 distinct items and quantity 1-100 per item.
+F6 implemented, awaiting review. CartView and /cart route; add available items,
+merge quantities, edit integer quantities 1-100, remove lines and cap distinct
+items at 100. One restaurant per cart, browser confirmation before replacement.
+Cart persists in sessionStorage; invalid stored data falls back to empty. Explicit
+logout clears cart. Public browsing/cart works before login. Totals use integer
+cents, labelled estimates; checkout will recheck server prices/availability.
+No order submission until F7. No backend changes or new dependencies.
+Verification: 20 unit tests and 9 browser tests passed (20.6s). Real seeded cart
+journey covers unavailable items, quantity/total, refresh, replacement cancel/
+confirm and removal persistence. F6 accepted; user requested commit and F7.
+Two UI-serving tests passed (2 existing warnings); Compose rebuilt healthy and
+git diff --check passed. Browser tests retain the benign color warning.
 Added requested trace shortcuts: npm run test:trace retains all test traces;
 npm run trace lists current trace.zip archives and opens the selected number.
 No additional dependencies; Enter cancels and missing traces show guidance.
@@ -182,7 +194,7 @@ generation and token persistence remain undecided before affected work.
 | F12 | Admin staff creation/assignment; verify API support before implementation. |
 | F13 | Review all role journeys through Nginx and document limitations. |
 
-Proposed lifecycle: in-memory cart, sessionStorage JWT, explicit refresh for orders, visible
+Lifecycle: sessionStorage cart and JWT, explicit refresh for orders, visible
 loading/errors and disabled duplicate submissions. Preserve checkout key on an
 uncertain outcome; clear cart only after confirmation. Backend enforces roles
 and prices. Resolve persistence choices before F4/F6.

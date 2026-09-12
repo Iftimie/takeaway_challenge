@@ -969,6 +969,23 @@ missing schemas, and failures. No new dependencies or migrations.
 
 ## Project notes
 
+### Cart (F6)
+
+On a menu, Add selects an available item. Cart in the header shows total quantity.
+Open it to edit quantities (1–100), remove lines and view the estimated EUR total.
+At most 100 different items are allowed. Adding the same item increases quantity.
+Adding from a different restaurant asks before replacing the current cart.
+
+Cart data is saved in sessionStorage and survives page refresh. It can be built
+before login; explicit logout clears it. Corrupt saved data falls back to an empty
+cart. Amounts are calculated in integer cents. These are estimates based on the
+menu when added; the server will validate current prices/availability at checkout.
+Order submission remains F7. No backend changes or dependencies were added.
+
+Current verification: 20 unit tests and 9 browser tests. The real-database cart
+journey tests quantity/total, unavailable items, refresh, replacement confirmation
+and removal. Unit tests cover limits, exact arithmetic and storage recovery.
+
 ### Customer registration (F5)
 
 Open `/ui/#/register` or click Register. Enter email, password (8–128 characters),
@@ -1062,7 +1079,7 @@ From the repository root:
 npm run test:unit
 ```
 
-Expected: 16 passed including registration tests. If PowerShell blocks npm.ps1, use `npm.cmd run test:unit`.
+Expected: 20 passed including cart tests. If PowerShell blocks npm.ps1, use `npm.cmd run test:unit`.
 Tests cover empty hashes, known routes, and unknown routes (including inherited
 object property names). They import the same `app/ui/routes.js` used by the UI.
 `app.js` is loaded with `type="module"` so it can import these functions directly.
@@ -1117,7 +1134,7 @@ $env:UI_BASE_URL = 'http://localhost:8080'
 try { npm run test:browser } finally { Remove-Item Env:UI_BASE_URL }
 ```
 
-This runs 4 controlled-response tests, skips the 4 real DB tests, and never seeds or
+This runs 4 controlled-response tests, skips the 5 real DB tests, and never seeds or
 cleans the normal deployment. It skips temporary-server/database startup and
 leaves Compose running. To see the
 browser during either run, use `npm run test:browser -- --headed`.
@@ -1137,7 +1154,7 @@ request is needed. Python package data includes built UI assets.
 F1 originally provided Restaurants and Log in placeholders. F2 adds the real
 restaurant list; F4 adds login. Click between views,
 use Back/Forward, and refresh `/ui/#/login`: the correct heading should appear.
-Unknown hashes display Page not found. Cart remains a future milestone.
+Unknown hashes display Page not found. Checkout remains a future milestone.
 `/docs` remains available.
 
 Focused verification:
