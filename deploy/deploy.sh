@@ -27,4 +27,4 @@ compose=(docker compose --project-name takeaway-qa --env-file .env -f compose.ya
 # Recreate Nginx so it resolves the current app container before its health check.
 "${compose[@]}" up -d --no-deps --force-recreate --wait nginx
 printf '%s\n' "$image" > current-image
-echo 'QA deployment completed. Nginx listens on localhost:8080.'
+echo 'QA deployment completed. Nginx listens on port 80.'

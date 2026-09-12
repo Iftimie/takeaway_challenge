@@ -6,7 +6,7 @@ variables {
 }
 
 run "prod_has_separate_resource_names" {
-  command = plan
+  command = apply
   variables {
     environment = "prod"
   }
@@ -21,7 +21,7 @@ run "prod_has_separate_resource_names" {
 }
 
 run "qa_key_based_ssh" {
-  command = plan
+  command = apply
   assert {
     condition     = aws_lightsail_instance.server.name == "takeaway-qa"
     error_message = "Default configuration must target QA."
@@ -31,10 +31,10 @@ run "qa_key_based_ssh" {
     error_message = "The SSH key must have a distinct name and be referenced by the instance."
   }
   assert {
-    condition = length(aws_lightsail_instance_public_ports.server.port_info) == 1 && alltrue([for rule in aws_lightsail_instance_public_ports.server.port_info :
-      rule.protocol == "tcp" && rule.from_port == 22 && rule.to_port == 22 && rule.cidrs == toset(["0.0.0.0/0"])
+    condition = length(aws_lightsail_instance_public_ports.server.port_info) == 2 && alltrue([for rule in aws_lightsail_instance_public_ports.server.port_info :
+      rule.protocol == "tcp" && contains([22, 80], rule.from_port) && rule.to_port == rule.from_port && rule.cidrs == toset(["0.0.0.0/0"])
     ])
-    error_message = "D7 must expose only TCP SSH, from any IPv4 address."
+    error_message = "Expose only TCP SSH and HTTP from IPv4."
   }
   assert {
     condition     = strcontains(aws_lightsail_instance.server.user_data, "PasswordAuthentication no")

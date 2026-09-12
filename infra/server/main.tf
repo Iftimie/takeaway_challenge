@@ -61,7 +61,7 @@ resource "aws_lightsail_instance" "server" {
   })
 }
 
-# D7 exposes SSH only. Web ports are added when the application needs them.
+# Public SSH and HTTP. HTTPS is added in D9.
 resource "aws_lightsail_instance_public_ports" "server" {
   instance_name = aws_lightsail_instance.server.name
   # Reapply our rules when an instance is replaced with the same name.
@@ -72,6 +72,12 @@ resource "aws_lightsail_instance_public_ports" "server" {
     protocol  = "tcp"
     from_port = 22
     to_port   = 22
+    cidrs     = ["0.0.0.0/0"]
+  }
+  port_info {
+    protocol  = "tcp"
+    from_port = 80
+    to_port   = 80
     cidrs     = ["0.0.0.0/0"]
   }
 }

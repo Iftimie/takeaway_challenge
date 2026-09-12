@@ -15,7 +15,7 @@ import urllib.request
 
 def main():
     root = Path(__file__).resolve().parents[1]
-    env = dict(os.environ, APP_IMAGE=sys.argv[1], HTTP_PORT='8768')
+    env = dict(os.environ, APP_IMAGE=sys.argv[1], HTTP_PORT='8768', HTTP_BIND='127.0.0.1')
     with tempfile.TemporaryDirectory() as directory:
         settings = Path(directory) / '.env'
         settings.write_text('POSTGRES_DB=deployment_test\nPOSTGRES_USER=test\n'

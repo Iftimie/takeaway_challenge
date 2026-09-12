@@ -4,8 +4,9 @@
 
 - Status: D1-D7 accepted. D8 implemented, awaiting review. QA application deployment
   uses deploy/compose.yaml and deploy/deploy.sh, with first-run server-generated
-  secrets and explicit migrations. No Terraform changes: access stays through SSH
-  until D9 HTTPS. Production application deployment is not started.
+  secrets and explicit migrations. User requested public HTTP on QA and prod;
+  local plans passed, firewall apply awaits PR merge/production approval. QA Nginx
+  now binds port 80. Production application deployment is not started.
 - Current design: [DEVOPS_DESIGN.md](DEVOPS_DESIGN.md). Region: `eu-north-1`.
   Repository: https://github.com/Iftimie/takeaway_challenge.
   D2 committed/pushed in 74bf7dc; user confirmed CI passed and waived the deliberate
@@ -107,6 +108,14 @@ of D1 and does not authorize creating AWS resources.
 - Backend dependency ranges are not fully locked; review reproducibility in CI.
 
 ## Latest verification
+
+- D8 follow-up: user requested public HTTP on BOTH QA/prod. Terraform adds TCP/80;
+  both local plans passed and replace only the public-ports resource (one add/one
+  destroy), not instances or keys. Two mocked tests passed; mock apply is used to
+  resolve provider-computed set values without AWS calls. Local Compose persistence
+  test passed. QA Nginx updated and localhost:80 health passed. Firewall not applied
+  locally: merge PR #4, then approve prod. Prod has no application yet. HTTP remains
+  unencrypted until D9. This supersedes the temporary SSH-tunnel access decision.
 
 - D8: isolated local Compose test passed fresh migrations, HTTP health, app
   replacement and login with the preserved account; test volume/containers removed.
