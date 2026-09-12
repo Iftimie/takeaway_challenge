@@ -1,0 +1,25 @@
+name: Check deployment approvals
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  qa:
+    name: Check QA access
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    environment: qa
+    steps:
+      - run: echo "QA environment allowed this job to run."
+
+  prod:
+    name: Check production approval
+    needs: qa
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    # GitHub environment settings enforce approval before this job starts.
+    environment: prod
+    steps:
+      - run: echo "Production environment allowed this job to run."

@@ -1,6 +1,7 @@
 # Deployment design
 
-Status: D1 accepted by the user on 2026-09-12. No infrastructure created.
+Status: D1 accepted; delivery design amended by user agreement to GHCR and SSH.
+The D4 state bucket now exists; consult the progress tracker for resource status.
 Milestone status and next actions live in [DEVOPS_PROGRESS.md](DEVOPS_PROGRESS.md).
 
 ## Purpose and boundaries
@@ -29,13 +30,16 @@ Use trusted IP certificates with automated renewal, subject to D9 verification.
 No domain, load balancer, managed database or Kubernetes is planned.
 
 GitHub Actions runs Python, JavaScript and browser tests using a disposable test
-database. A successful run builds and publishes an image to ECR. QA deploys it
+database. A successful run builds and publishes a public image to GitHub Container
+Registry (GHCR). QA deploys it
 and runs smoke checks. A GitHub production environment approval then permits
 deploying the same image digest to prod. A digest identifies the exact image
 contents, so approval cannot accidentally promote a different build.
 
-GitHub uses AWS OIDC for temporary AWS access and separate environment SSH keys
-to deploy to the servers. Infrastructure changes use reviewed Terraform plans;
+GitHub publishes with its built-in token and uses separate environment SSH keys
+to deploy to the servers. Servers pull public images without registry credentials.
+There is no AWS OIDC integration or permanent AWS key in GitHub. Terraform runs
+locally using browser-login credentials. Infrastructure changes use reviewed plans;
 ordinary application deployment does not recreate infrastructure. Serialize
 deployments per environment. Run migrations before starting the updated app.
 Sample-data reset remains an explicit destructive action, never a deployment step.
@@ -50,7 +54,7 @@ tags where supported. Names below are proposals, not existing resources.
 | Group | Resources | Naming / state boundary |
 |---|---|---|
 | Bootstrap | Private encrypted, versioned S3 state bucket with state locking | `takeaway-tfstate-<account-id>-<region>`; separate bootstrap state |
-| Shared delivery | ECR repository, GitHub OIDC provider if project-owned, scoped IAM roles/policies | ECR `takeaway-service`; `shared/terraform.tfstate` |
+| Shared delivery | Public GHCR package and GitHub QA/prod environments | Proposed package `ghcr.io/iftimie/takeaway_challenge`; GitHub-owned settings, no AWS delivery IAM resources |
 | QA | Lightsail instance, firewall rules, SSH public key and any explicitly allocated IP | `takeaway-qa`; `qa/terraform.tfstate` |
 | Prod | Equivalent independent resources | `takeaway-prod`; `prod/terraform.tfstate` |
 | Monitoring | Log groups, metric definitions/filters as needed, one dashboard, per-environment alarms, SNS email notifications | Logs `/takeaway/qa/app`, `/takeaway/prod/app`; dashboard `takeaway`; `monitoring/terraform.tfstate` |
@@ -85,7 +89,7 @@ cost money. The user's $100 credit is not a spending cap.
    removing the application servers.
 3. Destroy QA/prod servers and their disposable data; release any allocated IPs,
    disks, keys and snapshots created for the project.
-4. Remove images/ECR and project-owned delivery IAM/OIDC resources. Remove
+4. Remove project GHCR images/package as part of complete cleanup. Remove
    obsolete deployment secrets from GitHub through the appropriate owner.
 5. Verify earlier cleanup succeeded, preserve bootstrap state locally, then remove
    every S3 object version/delete marker and the state bucket last.
@@ -101,12 +105,11 @@ See [AWS metric lifecycle documentation](https://docs.aws.amazon.com/AmazonCloud
 
 - Verify regional service availability
   and pricing for `eu-north-1` before provisioning.
-- D5: choose the production approver and ensure a sole operator is not blocked
-  by a rule preventing self-approval.
-- D7/D12: settle server authentication for private ECR pulls and CloudWatch
-  publishing. GitHub OIDC authenticates the workflow, not the running server;
-  do not assume the server inherits that identity. Also settle SSH firewall access
-  for GitHub runners and verify the server host key.
+- D5: configure Iftimie as production approver with self-approval allowed, while
+  still requiring the explicit approval step. Restrict deployment branches.
+- D7/D12: verify Lightsail/monitoring availability under the current account
+  restrictions and settle CloudWatch publishing authentication. Also settle SSH
+  firewall access for GitHub runners and verify the server host key.
 - D9: verify the certificate client, IP issuance and automatic renewal before
   claiming trusted HTTPS works.
 - D12–D14: choose the small metric set, retention, thresholds and notification email.
