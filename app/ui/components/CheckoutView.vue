@@ -18,6 +18,7 @@ export default {
     <p v-if="checkout.error" role="alert">{{ checkout.error }}</p>
     <template v-if="checkout.order">
       <h2>Order confirmed</h2>
+      <a :href="`#/orders/${checkout.order.id}`">View order details</a>
       <p>Order #{{ checkout.order.id }} — {{ checkout.order.status }}</p>
       <ul><li v-for="item in checkout.order.items" :key="item.menu_item_id">{{ item.name }} × {{ item.quantity }} — {{ item.unit_price }} EUR each</li></ul>
       <p>Total: {{ checkout.order.total }} {{ checkout.order.currency }}</p>

@@ -163,7 +163,7 @@ git diff --check passed. Browser tests retain the benign color warning.
 Added requested trace shortcuts: npm run test:trace retains all test traces;
 npm run trace lists current trace.zip archives and opens the selected number.
 No additional dependencies; Enter cancels and missing traces show guidance.
-F7 accepted; user requested commit and F8. Checkout route/component uses
+F7 accepted and committed as c2ccfbb; user requested F8. Checkout route/component uses
 the existing POST /orders API, customer access, profile delivery defaults and
 server confirmation with order number/status/items/final total. Successful orders
 clear the cart. Pending checkout stores the exact payload, customer ID and UUID
@@ -182,6 +182,19 @@ retries: HTTP 200 returns the original ID and order listing contains one order.
 Fixture cleanup now deletes order lines/orders before menus/restaurants/users.
 Existing dependency and color warnings remain. Compose rebuilt healthy for
 manual review; git diff --check passed. Stop for F7 review.
+F8 accepted; user requested commit and F9. My orders navigation and /orders,
+/orders/{id} hash views use existing customer-only APIs. Two orders per page,
+newest first, detail snapshots/delivery/total/status and explicit Refresh.
+Checkout confirmation links to its order. Loading, empty, missing, failure and
+authentication states are handled. Each visit/account change gets separate state
+so late responses cannot overwrite a new view. No stored order history or polling.
+Restaurant IDs and server timestamps are displayed directly; list pagination
+returns to page 1 after leaving the view. No backend or dependency changes.
+Isolated browser fixtures optionally seed three orders; existing checkout tests
+still start with no orders. Verification: 29 JS unit tests and 2 UI-serving tests
+passed, with the existing Python dependency warnings. All 11 browser tests passed
+(26.7s), including real history pagination/details/refresh/missing/logout checks.
+Compose rebuilt healthy; git diff --check passed. Stop for F8 review.
 F1.1 extracts routeFromHash/viewForRoute into app/ui/routes.js, imported by the
 browser and Node tests. app.js now loads as a browser module. Added package.json
 with type=module and test:unit; no npm dependencies or application build step.

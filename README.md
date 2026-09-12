@@ -1168,6 +1168,12 @@ performance/metrics scope decisions remain. Database backup implementation was
 explicitly skipped; backups remain a production consideration.
 ## UI checkout (F7)
 
+Customer order history is available under **My orders** after login. It shows
+two orders per page, newest first. Open an order for delivery details and item
+prices, then use **Refresh** to check its current status. Checkout confirmation
+also links directly to the order. Restaurant IDs and server timestamps are shown
+as returned by the API; there is no background polling.
+
 Add items to the cart, choose Checkout, and log in as a customer. Return to
 Checkout, enter delivery details and select Place order. Confirmation shows the
 server's order number, status and final prices. Cart prices are estimates.

@@ -13,7 +13,7 @@ os.environ.update({
     'POSTGRES_PORT': '55432',
 })
 
-from sqlalchemy import delete, text
+from sqlalchemy import delete, text, select
 from sqlalchemy.orm import Session
 from app.db import get_engine
 from app.models import Restaurant, MenuItem, User, Order, OrderItem
@@ -26,7 +26,7 @@ def compose(*args):
                     *args], cwd=ROOT, check=True)
 
 
-def fixtures(seed):
+def fixtures(seed, orders=False):
     # The fixed endpoint and identity check prevent cleanup of the normal DB.
     with Session(get_engine()) as session:
         if (session.scalar(text('SELECT current_database()')) != 'takeaway_browser_test'
@@ -48,12 +48,25 @@ def fixtures(seed):
                                      price='12.50', available=i != 2) for i in range(1, 4)])
             session.add(MenuItem(restaurant_id=restaurants[1].id, name='Other Restaurant Meal',
                                  price='9.00', available=True))
+        if orders:
+            session.flush()
+            customer = session.scalar(select(User))
+            item = session.scalar(select(MenuItem).order_by(MenuItem.id))
+            for index in range(3):
+                order = Order(customer_id=customer.id, restaurant_id=item.restaurant_id,
+                              delivery_name='Browser Customer', delivery_address='History Street 10',
+                              status='pending', total='12.50', currency='EUR',
+                              idempotency_key=f'history-{index}', request_fingerprint='0' * 64)
+                session.add(order)
+                session.flush()
+                session.add(OrderItem(order_id=order.id, menu_item_id=item.id,
+                                      name=item.name, unit_price=item.price, quantity=1))
         session.commit()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=['prepare', 'seed', 'clean', 'stop'])
+    parser.add_argument('action', choices=['prepare', 'seed', 'seed-orders', 'clean', 'stop'])
     action = parser.parse_args().action
     if action == 'prepare':
         try:
@@ -65,4 +78,4 @@ if __name__ == '__main__':
     elif action == 'stop':
         compose('down')
     else:
-        fixtures(action == 'seed')
+        fixtures(action in ('seed', 'seed-orders'), orders=action == 'seed-orders')
