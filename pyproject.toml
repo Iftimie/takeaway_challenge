@@ -29,7 +29,7 @@ test = [
 include = ["app*"]
 
 [tool.setuptools.package-data]
-app = ["ui/*.html", "ui/*.css", "ui/*.js", "ui/vendor/*.js", "ui/vendor/*.txt"]
+app = ["ui/dist/*.html", "ui/dist/assets/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

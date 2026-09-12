@@ -5,7 +5,7 @@ const views = {
   },
   '/login': {
     title: 'Log in',
-    description: 'Login will be available in a later UI milestone.',
+    description: 'Log in to your account. You can browse without logging in.',
   },
 };
 

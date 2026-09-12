@@ -1,3 +1,9 @@
+FROM node:24-slim AS frontend
+WORKDIR /frontend
+COPY package.json package-lock.json vite.config.js ./
+COPY app/ui ./app/ui
+RUN npm ci --ignore-scripts && npm run build
+
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -6,6 +12,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 COPY pyproject.toml ./
 COPY app ./app
+COPY --from=frontend /frontend/app/ui/dist ./app/ui/dist
 RUN pip install --no-cache-dir . \
     && useradd --uid 10001 --create-home appuser
 

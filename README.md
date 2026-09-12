@@ -21,6 +21,24 @@ install (`-e`) makes source changes available without reinstalling the project;
 `[test]` includes pytest and HTTPX. Calling the environment's Python directly
 avoids needing to activate it or change PowerShell execution policy.
 
+The UI now uses Vue single-file components and Vite. Before serving the UI locally
+or running UI-serving pytest tests, use Node 22.12+ (Node 24 recommended):
+
+```powershell
+npm ci
+npm run build
+```
+
+FastAPI serves generated `app/ui/dist/` at `/ui/`. Build output is ignored by Git.
+Build before creating a Python wheel so UI package data is included. Docker
+Compose builds the UI automatically in a separate Node stage; the final runtime
+uses Python only.
+
+For UI development, start Uvicorn as below, then run `npm run dev` in another
+terminal and open `http://localhost:5173/ui/`. Vite updates edited components
+and proxies API requests to Uvicorn on port 8000. The production `/ui/` served
+by Uvicorn or Docker still needs a rebuild after source changes.
+
 ## Run
 
 ```powershell
@@ -951,6 +969,41 @@ missing schemas, and failures. No new dependencies or migrations.
 
 ## Project notes
 
+### Vue component structure
+
+`app/ui/index.html` is now the entry shell. `app.js` mounts `App.vue`, which owns
+shared state and navigation. `components/LoginView.vue`, `RestaurantList.vue`
+and `MenuView.vue` contain each view's HTML. Props supply state; emitted events
+request actions from App.vue. Existing API/state modules and shared CSS remain.
+Vue is installed from npm, replacing the vendored global script. Vite compiles
+the templates; no Vue Router or component library was added.
+
+`npm run test:browser` and `npm run test:trace` build automatically first.
+Unit tests still import plain JavaScript and require no build. Direct
+`npx playwright test` requires running `npm run build` yourself first.
+
+### Login and logout (F4)
+
+Open `/ui/#/login` and enter an existing customer, staff or admin account. The
+browser calls the existing login API and then `/users/me` for identity and role.
+The header shows the name/role and a Log out button. Registration is still F5.
+
+The JWT is saved in tab-scoped sessionStorage, so page refresh preserves login.
+No password is stored. Logout clears the saved token and user identity and
+form state. Passwords clear after submission or navigation. Public browsing still
+works without login. Disabling the submit button prevents duplicate submissions.
+
+Page startup checks the saved token against `/users/me` for current user/role.
+There is no Refresh account button. If the token has expired,
+a 401 clears the session and asks for login again. There is no background timer;
+expiry is detected on a protected request. A network failure shows a retryable
+error without discarding the token. Logout is local; it does not revoke JWTs.
+
+Verification: `npm run test:unit` passes 13 tests; `npm run test:browser` passes
+7 tests. The login browser journey uses the isolated database's test customer,
+including real wrong-password rejection, login, logout and refresh. The expiry
+response alone is simulated. The fixture password is synthetic test data.
+
 ### Menu browsing (F3)
 
 Click View menu beside a restaurant. `/ui/#/restaurants/123/menu` supports direct
@@ -986,7 +1039,7 @@ test database. Other browser cases use controlled responses for loading/errors.
 ### JavaScript unit tests (F1.1)
 
 Use Node.js 22 or newer with npm (verified with Node 24.20.0). These are
-development tools only; the application still runs without Node or a build step.
+development/build tools only; the built application's Python runtime needs no Node.
 No npm dependencies are needed for the unit tests because they use Node's built-in
 `node:test` and `node:assert/strict` modules with no external dependencies.
 
@@ -996,7 +1049,7 @@ From the repository root:
 npm run test:unit
 ```
 
-Expected: 9 passed including restaurant/menu tests. If PowerShell blocks npm.ps1, use `npm.cmd run test:unit`.
+Expected: 13 passed including restaurant/menu/session tests. If PowerShell blocks npm.ps1, use `npm.cmd run test:unit`.
 Tests cover empty hashes, known routes, and unknown routes (including inherited
 object property names). They import the same `app/ui/routes.js` used by the UI.
 `app.js` is loaded with `type="module"` so it can import these functions directly.
@@ -1051,7 +1104,7 @@ $env:UI_BASE_URL = 'http://localhost:8080'
 try { npm run test:browser } finally { Remove-Item Env:UI_BASE_URL }
 ```
 
-This runs 4 controlled-response tests, skips the 2 real DB tests, and never seeds or
+This runs 4 controlled-response tests, skips the 3 real DB tests, and never seeds or
 cleans the normal deployment. It skips temporary-server/database startup and
 leaves Compose running. To see the
 browser during either run, use `npm run test:browser -- --headed`.
@@ -1064,15 +1117,14 @@ Open http://localhost:8080/ui/ with Compose, or http://127.0.0.1:8000/ui/
 with local Uvicorn. After changes, rebuild using
 `docker --context desktop-linux compose up -d --build --wait`.
 
-FastAPI serves `app/ui/`; the existing Nginx proxy needs no new route. Vue
-3.5.13 is stored locally with its MIT license in `app/ui/vendor/` (upstream
-`https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js`). There is no Node build
-step or runtime CDN request. Python package data includes the UI assets.
+FastAPI serves compiled `app/ui/dist/`; the existing Nginx proxy needs no new
+route. Vue 3.5.13 is installed through npm and compiled by Vite. No runtime CDN
+request is needed. Python package data includes built UI assets.
 
 F1 originally provided Restaurants and Log in placeholders. F2 adds the real
-restaurant list; Log in remains a placeholder. Click between them,
+restaurant list; F4 adds login. Click between views,
 use Back/Forward, and refresh `/ui/#/login`: the correct heading should appear.
-Unknown hashes display Page not found. Cart and login remain future milestones.
+Unknown hashes display Page not found. Cart remains a future milestone.
 `/docs` remains available.
 
 Focused verification:

@@ -4,69 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Takeaway Service</title>
-  <link rel="stylesheet" href="/ui/style.css">
-  <script defer src="/ui/vendor/vue-3.5.13.global.prod.js"></script>
-  <script type="module" src="/ui/app.js"></script>
 </head>
 <body>
-  <div id="app" v-cloak>
-    <header>
-      <strong>Takeaway Service</strong>
-      <nav aria-label="Main navigation">
-        <a href="#/restaurants" :aria-current="route === '/restaurants' ? 'page' : null">Restaurants</a>
-        <a href="#/login" :aria-current="route === '/login' ? 'page' : null">Log in</a>
-      </nav>
-    </header>
-    <main>
-      <h1>{{ view.title }}</h1>
-      <p>{{ view.description }}</p>
-      <section v-if="route === '/restaurants'" aria-label="Restaurant list" :aria-busy="restaurants.loading">
-        <p v-if="restaurants.loading" role="status">Loading restaurants…</p>
-        <div v-else-if="restaurants.error" role="alert">
-          <p>{{ restaurants.error }}</p>
-          <button @click="loadPage(restaurants.offset)">Retry</button>
-        </div>
-        <template v-else-if="restaurants.loaded">
-          <p v-if="restaurants.items.length === 0">{{ restaurants.offset === 0 ? 'No restaurants yet.' : 'No more restaurants.' }}</p>
-          <ul v-else>
-            <li v-for="restaurant in restaurants.items" :key="restaurant.id">
-              <strong>{{ restaurant.name }}</strong><br>{{ restaurant.address }}
-              <br><a :href="`#/restaurants/${restaurant.id}/menu`">View menu</a>
-            </li>
-          </ul>
-        </template>
-        <nav aria-label="Restaurant pages">
-          <button @click="loadPage(restaurants.offset - pageSize)" :disabled="restaurants.loading || restaurants.offset === 0">Previous</button>
-          <span>Page {{ restaurants.offset / pageSize + 1 }}</span>
-          <button @click="loadPage(restaurants.offset + pageSize)" :disabled="!hasNextPage">Next</button>
-        </nav>
-      </section>
-      <section v-if="menuId" aria-label="Restaurant menu" :aria-busy="menu.loading">
-        <a href="#/restaurants">Back to restaurants</a>
-        <h2 v-if="menu.restaurant">{{ menu.restaurant.name }}</h2>
-        <p v-if="menu.loading" role="status">Loading menu…</p>
-        <div v-else-if="menu.error" role="alert">
-          <p>{{ menu.error }}</p>
-          <button @click="loadMenuPage(menu.offset)">Retry</button>
-        </div>
-        <template v-else-if="menu.loaded">
-          <p v-if="!menu.items.length">{{ menu.offset === 0 ? 'No menu items yet.' : 'No more menu items.' }}</p>
-          <ul v-else>
-            <li v-for="item in menu.items" :key="item.id">
-              <strong>{{ item.name }}</strong> — {{ item.price }} {{ item.currency }}
-              <span>{{ item.available ? 'Available' : 'Unavailable' }}</span>
-            </li>
-          </ul>
-        </template>
-        <nav aria-label="Menu pages">
-          <button @click="loadMenuPage(menu.offset - pageSize)" :disabled="menu.loading || menu.offset === 0">Previous</button>
-          <span>Page {{ menu.offset / pageSize + 1 }}</span>
-          <button @click="loadMenuPage(menu.offset + pageSize)" :disabled="!hasNextMenuPage">Next</button>
-        </nav>
-      </section>
-    </main>
-    <footer>UI preview · <a href="/docs">API documentation</a></footer>
-  </div>
+  <div id="app"></div>
+  <script type="module" src="/app.js"></script>
   <noscript>This interface requires JavaScript. <a href="/docs">Open API documentation</a>.</noscript>
 </body>
 </html>

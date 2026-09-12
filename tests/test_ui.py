@@ -1,3 +1,5 @@
+import re
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -11,15 +13,14 @@ def test_ui_redirect_and_local_assets():
         page = client.get('/ui/')
         assert page.status_code == 200
         assert 'text/html' in page.headers['content-type']
-        assert 'type="module" src="/ui/app.js"' in page.text
-        for path in ('style.css', 'app.js', 'vendor/vue-3.5.13.global.prod.js'):
-            assert f'/ui/{path}' in page.text
-            asset = client.get(f'/ui/{path}')
+        assets = re.findall(r'(?:src|href)="(/ui/assets/[^\"]+)"', page.text)
+        assert any(path.endswith('.js') for path in assets)
+        assert any(path.endswith('.css') for path in assets)
+        for path in assets:
+            asset = client.get(path)
             assert asset.status_code == 200
             assert asset.content
-        module = client.get('/ui/routes.js')
-        assert module.status_code == 200
-        assert 'javascript' in module.headers['content-type']
+        assert client.get('/ui/App.vue').status_code == 404
 
 
 def test_ui_missing_asset_does_not_return_html_shell():

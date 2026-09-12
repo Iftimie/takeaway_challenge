@@ -3,6 +3,9 @@
 !Dockerfile
 !.dockerignore
 !pyproject.toml
+!package.json
+!package-lock.json
+!vite.config.js
 !app/
 !app/**
 !alembic.ini
@@ -10,3 +13,4 @@
 !migrations/**
 **/__pycache__/
 **/*.pyc
+app/ui/dist/

@@ -23,6 +23,7 @@ export default defineConfig({
       POSTGRES_DB: 'takeaway_browser_test', POSTGRES_USER: 'browser_test',
       POSTGRES_PASSWORD: 'browser_test_only', POSTGRES_HOST: '127.0.0.1',
       POSTGRES_PORT: '55432',
+      JWT_SECRET: 'browser-test-only-jwt-key-not-for-production',
     },
     url: `${localURL}/ui/`,
     reuseExistingServer: false,

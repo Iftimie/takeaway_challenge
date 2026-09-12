@@ -16,7 +16,8 @@ os.environ.update({
 from sqlalchemy import delete, text
 from sqlalchemy.orm import Session
 from app.db import get_engine
-from app.models import Restaurant, MenuItem
+from app.models import Restaurant, MenuItem, User
+from app.auth.service import password_hasher
 
 
 def compose(*args):
@@ -33,7 +34,10 @@ def fixtures(seed):
             raise RuntimeError('Refusing fixture changes outside the browser test database')
         session.execute(delete(MenuItem))
         session.execute(delete(Restaurant))
+        session.execute(delete(User))
         if seed:
+            session.add(User(email='browser-customer@example.com', name='Browser Customer',
+                             role='customer', password_hash=password_hasher.hash('Browser-test-password-123!')))
             restaurants = [Restaurant(name=f'Browser Restaurant {i}', address=f'Test Street {i}')
                            for i in range(1, 4)]
             session.add_all(restaurants)

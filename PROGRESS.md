@@ -105,8 +105,35 @@ menu creation/updates and restaurant order listing/status updates. Tests now
 verify all four operations without assignments, missing restaurant 404 and status
 transition rules. Existing customer/staff restrictions remain. 403 backend tests
 passed with 2 existing warnings; separate commit requested by the user.
-F3 committed as e9c0060. Next: F4 login/logout. User accepted in-memory login:
-browser refresh requires logging in again. No persistent token storage.
+F3 committed as e9c0060. User revised F4: login must survive page refresh;
+use tab-scoped sessionStorage and automatic /users/me validation on startup.
+F4 accepted by the user; commit requested. Login form calls /auth/login then /users/me;
+only commits session identity after both succeed. Header shows name and server
+role, Account and Log out. Token persists in sessionStorage; logout clears it and
+identity/form values. Password clears on submission/navigation. Startup checks
+/users/me; 401 clears login and shows an expiry message. No background expiry
+polling; future protected calls should reuse authenticatedFetch. Public browsing
+remains available. No backend changes or new dependencies.
+Fixtures add a test-only customer with a hashed password; clean removes it. Test
+app JWT key is explicit and test-only. Real browser login covers invalid password,
+success, logout and page-refresh preservation of login; only expired /users/me is mocked.
+Refresh account button removed. Verification: 13 unit tests and 7 browser tests
+passed (16.8s) after this revision. No F4 commit
+requested; stop for review. Admin permission change committed as 8e51fde.
+Two UI-serving tests also passed (2 existing warnings); Compose rebuild completed
+healthy. Browser runs retain the existing benign color-environment warning.
+User requested standard Vue single-file components and a frontend build. F4
+refactor awaiting review: App.vue owns state/navigation; LoginView, RestaurantList
+and MenuView use props/events. Behaviour retained. Vite 8.3.0/plugin-vue 6.0.8
+build app/ui/dist served by FastAPI. Vue 3.5.13 installed via npm; vendored global
+script removed. Node >=22.12 required; verified on 24.20.0. Docker has a Node
+build stage and Python runtime; Python package data includes compiled assets.
+npm run dev serves live UI with backend proxy; npm run build for local FastAPI.
+Browser/trace npm commands build first. Verification: build, 13 unit tests and
+7 browser tests passed. Two UI-serving tests passed (2 existing warnings).
+Multi-stage Docker rebuild healthy; 4 browser checks passed through Nginx,
+3 isolated-DB tests skipped as designed. F4 approved for commit, including Vue SFC
+build refactor. Next authorized milestone: F5 customer registration.
 Added requested trace shortcuts: npm run test:trace retains all test traces;
 npm run trace lists current trace.zip archives and opens the selected number.
 No additional dependencies; Enter cancels and missing traces show guidance.
@@ -119,8 +146,8 @@ warnings). Local browser smoke verified rendering and navigation after module
 conversion. No Docker rebuild or full backend suite needed for this change.
 F1.1 accepted; proceeding to the agreed browser integration submilestone F1.2.
 Later scopes remain proposals to review one milestone at a time.
-Serve same-origin HTML/assets at /ui/ behind existing Nginx. Vue without a build
-step, minimal CSS, hash navigation, no external CDN at runtime. API client
+Serve same-origin built HTML/assets at /ui/ behind existing Nginx. Vue SFCs with
+Vite, minimal CSS, hash navigation, no external CDN at runtime. API client
 generation and token persistence remain undecided before affected work.
 
 | Milestone | Scope / acceptance |
@@ -141,7 +168,7 @@ generation and token persistence remain undecided before affected work.
 | F12 | Admin staff creation/assignment; verify API support before implementation. |
 | F13 | Review all role journeys through Nginx and document limitations. |
 
-Proposed lifecycle: in-memory cart and JWT, explicit refresh for orders, visible
+Proposed lifecycle: in-memory cart, sessionStorage JWT, explicit refresh for orders, visible
 loading/errors and disabled duplicate submissions. Preserve checkout key on an
 uncertain outcome; clear cart only after confirmation. Backend enforces roles
 and prices. Resolve persistence choices before F4/F6.
