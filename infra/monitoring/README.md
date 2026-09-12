@@ -60,3 +60,19 @@ Credential rotation may require restarting Docker to clear cached driver credent
 Nine local deployment tests, two Terraform mock tests, Compose config, actionlint
 and shell validation cover the code. Live publishing and metric delivery remain
 pending approved permissions and the Actions run. No resource apply was run locally.
+
+
+## D13 shared dashboard
+
+The `takeaway` dashboard compares QA/prod Requests (Sum), ServerErrors (Sum),
+and Latency (Average), at one-minute periods over the last three hours. Missing
+samples remain gaps rather than being presented as confirmed zero errors.
+The QA monitoring state owns this single shared resource; prod creates no dashboard.
+It uses existing metrics and creates no additional metrics or log ingestion.
+
+`qa-dashboard-permissions.json` was approved and attached: GetDashboard, PutDashboard
+and DeleteDashboards only for `arn:aws:cloudwatch::455958489157:dashboard/takeaway`.
+Delete is needed for the agreed complete teardown. Prod needs no new permissions.
+Attached to github-actions-qa as inline TakeawayDashboard; AWS readback verified.
+After merge, open CloudWatch > Dashboards > takeaway and verify both series and
+correct statistics. This changes dashboard presentation only, not production data.
