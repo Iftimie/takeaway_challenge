@@ -7,7 +7,9 @@
   },
   "scripts": {
     "test:unit": "node --test tests/ui-unit/*.test.js",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:trace": "playwright test --trace on",
+    "trace": "node scripts/show-trace.js"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"

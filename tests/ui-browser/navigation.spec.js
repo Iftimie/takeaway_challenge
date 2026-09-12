@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 
-test('navigation and browser history update the visible view', async ({ page }) => {
+test.beforeEach(async ({ page }) => {
+  await page.route('**/restaurants?*', route => route.fulfill({ json: [] }));
+});
+
+test('navigation-and-browser-history-update-the-visible-view', async ({ page }) => {
   await page.goto('/ui/');
   await expect(page.getByRole('heading', { name: 'Restaurants', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Log in', exact: true }).click();
@@ -12,7 +16,7 @@ test('navigation and browser history update the visible view', async ({ page }) 
   await expect(page.getByRole('heading', { name: 'Log in', exact: true })).toBeVisible();
 });
 
-test('a direct hash URL survives refresh', async ({ page }) => {
+test('a-direct-hash-URL-survives-refresh', async ({ page }) => {
   await page.goto('/ui/#/login');
   await expect(page.getByRole('heading', { name: 'Log in', exact: true })).toBeVisible();
   await page.reload();

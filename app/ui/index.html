@@ -20,6 +20,26 @@
     <main>
       <h1>{{ view.title }}</h1>
       <p>{{ view.description }}</p>
+      <section v-if="route === '/restaurants'" aria-label="Restaurant list" :aria-busy="restaurants.loading">
+        <p v-if="restaurants.loading" role="status">Loading restaurants…</p>
+        <div v-else-if="restaurants.error" role="alert">
+          <p>{{ restaurants.error }}</p>
+          <button @click="loadPage(restaurants.offset)">Retry</button>
+        </div>
+        <template v-else-if="restaurants.loaded">
+          <p v-if="restaurants.items.length === 0">{{ restaurants.offset === 0 ? 'No restaurants yet.' : 'No more restaurants.' }}</p>
+          <ul v-else>
+            <li v-for="restaurant in restaurants.items" :key="restaurant.id">
+              <strong>{{ restaurant.name }}</strong><br>{{ restaurant.address }}
+            </li>
+          </ul>
+        </template>
+        <nav aria-label="Restaurant pages">
+          <button @click="loadPage(restaurants.offset - pageSize)" :disabled="restaurants.loading || restaurants.offset === 0">Previous</button>
+          <span>Page {{ restaurants.offset / pageSize + 1 }}</span>
+          <button @click="loadPage(restaurants.offset + pageSize)" :disabled="!hasNextPage">Next</button>
+        </nav>
+      </section>
     </main>
     <footer>UI preview · <a href="/docs">API documentation</a></footer>
   </div>

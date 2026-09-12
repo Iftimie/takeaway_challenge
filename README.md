@@ -951,6 +951,22 @@ missing schemas, and failures. No new dependencies or migrations.
 
 ## Project notes
 
+### Restaurant browsing (F2)
+
+Open `/ui/` to load restaurants from the existing same-origin API. Names and
+addresses appear 2 per page, with Previous/Next buttons. Loading, empty lists
+and failures have visible messages; Retry reloads the failed page. PostgreSQL
+must be available for real browsing.
+
+A full last page can lead to one empty page because the API has no total count;
+Previous returns to the prior page. Next respects the API offset ceiling of 10000.
+Switching views retains the list; browser refresh starts at page 1. Menu browsing
+is deferred to F3. No generated API client or new dependency was added.
+
+Verification: 6 JavaScript unit tests and 5 browser tests pass; the prior 2
+UI-serving checks also passed. Pagination uses 3 committed records in an isolated
+test database. Other browser cases use controlled responses for loading/errors.
+
 ### JavaScript unit tests (F1.1)
 
 Use Node.js 22 or newer with npm (verified with Node 24.20.0). These are
@@ -964,7 +980,7 @@ From the repository root:
 npm run test:unit
 ```
 
-Expected: 3 passed. If PowerShell blocks npm.ps1, use `npm.cmd run test:unit`.
+Expected: 6 passed including restaurant tests. If PowerShell blocks npm.ps1, use `npm.cmd run test:unit`.
 Tests cover empty hashes, known routes, and unknown routes (including inherited
 object property names). They import the same `app/ui/routes.js` used by the UI.
 `app.js` is loaded with `type="module"` so it can import these functions directly.
@@ -974,7 +990,7 @@ These tests do not test Vue rendering; the browser suite below does.
 ### Browser integration tests (F1.2)
 
 One-time setup from the repository root (requires Node 22+ and the existing
-Python `.venv` with application dependencies):
+Python `.venv` with application dependencies, and Docker Desktop running):
 
 ```powershell
 npm ci
@@ -984,14 +1000,33 @@ npm run test:browser
 
 Use `npm.cmd`/`npx.cmd` if PowerShell blocks the corresponding `.ps1` scripts.
 Playwright starts a temporary Uvicorn server on port 8766 and stops it after the
-run. Keep that port free. No PostgreSQL is needed for these two shell tests.
-They cover navigation with Back/Forward and a direct hash URL surviving refresh.
+run. Keep ports 8766 and 55432 free. Global setup starts a separate PostgreSQL
+container using `compose.browser-tests.yaml` and applies Alembic migrations.
+The test app and Python helper use fixed local test settings instead of your
+normal database settings. The public test-only password is for this disposable
+localhost container, not production.
+
+The real pagination test calls `tests/browser_db.py seed`, which resets and commits
+three restaurants. It checks two on page 1, one on page 2, then Previous. A finally
+block calls `clean`, including on assertion failure. Cleanup is restricted to the
+fixed test endpoint and checks the connected database/user before deleting rows.
+Global teardown removes the container; tmpfs storage is disposable. One worker
+prevents fixture conflicts. Force-killing the runner can bypass teardown; recover
+with ` .\.venv\Scripts\python.exe tests/browser_db.py stop` before rerunning.
+Seed also removes leftover fixture rows from an interrupted previous test.
+
+The other tests cover navigation/refresh and controlled loading/error/empty states.
 Each test gets a fresh browser context; Chromium runs headlessly, with one worker
 and no retries. No screenshots are compared. Video recording is currently enabled
 for every test; videos are saved under ignored `test-results/`. Failed runs save a trace under
 ignored `test-results/`; inspect it with `npx playwright show-trace <trace.zip>`.
 Use `npm run test:browser -- --trace on` to retain traces of passing tests too,
 or `npm run test:browser -- --ui` to inspect actions in Playwright UI mode.
+
+Shortcuts: `npm run test:trace` runs the suite with tracing enabled for all tests.
+Afterward, run `npm run trace` and enter the number of the trace to open. Press
+Enter to cancel. No long archive paths are needed. Traces come from the current
+`test-results/` directory, which subsequent test runs normally replace.
 
 To run the same tests against an already-running, rebuilt Compose deployment:
 
@@ -1000,7 +1035,9 @@ $env:UI_BASE_URL = 'http://localhost:8080'
 try { npm run test:browser } finally { Remove-Item Env:UI_BASE_URL }
 ```
 
-This skips temporary-server startup and leaves Compose running. To see the
+This runs 4 controlled-response tests, skips the real DB test, and never seeds or
+cleans the normal deployment. It skips temporary-server/database startup and
+leaves Compose running. To see the
 browser during either run, use `npm run test:browser -- --headed`.
 Playwright is a pinned development dependency in package.json/package-lock.json;
 neither Node tooling nor test reports are included in the production image.
@@ -1016,10 +1053,11 @@ FastAPI serves `app/ui/`; the existing Nginx proxy needs no new route. Vue
 `https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js`). There is no Node build
 step or runtime CDN request. Python package data includes the UI assets.
 
-Restaurants and Log in are placeholders in this milestone. Click between them,
+F1 originally provided Restaurants and Log in placeholders. F2 adds the real
+restaurant list; Log in remains a placeholder. Click between them,
 use Back/Forward, and refresh `/ui/#/login`: the correct heading should appear.
-Unknown hashes display Page not found. No restaurant data, cart or login exists
-in the UI yet. `/docs` remains available.
+Unknown hashes display Page not found. Cart and login remain future milestones.
+`/docs` remains available.
 
 Focused verification:
 ` .\.venv\Scripts\python.exe -m pytest tests/test_ui.py tests/test_health.py tests/test_request_logging.py -q`

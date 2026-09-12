@@ -56,7 +56,7 @@
 ## UI epic plan
 
 F1 and F1.1 are accepted; F1.1 committed as `d940626`.
-F1.2 is accepted by the user; commit requested. Added Playwright Test 1.63.0, lockfile,
+F1.2 is accepted and committed (`da4786a`). Added Playwright Test 1.63.0, lockfile,
 Chromium-only config and two browser tests. Default run owns a temporary Uvicorn
 server on port 8766; UI_BASE_URL targets an existing deployment instead.
 Tests cover view navigation/Back/Forward and direct hash URL/refresh. One worker,
@@ -67,7 +67,31 @@ Local browser suite: 2 passed in 2.6s; benign NO_COLOR/FORCE_COLOR warning.
 Compose rebuilt healthy; the same 2 tests passed through Nginx in 1.7s.
 git diff --check passed. Backend/unit suites were not repeated for tooling-only
 changes. Compose remains running; the temporary local test server was stopped.
-No application behavior changes. Next milestone is F2; not started.
+F2 is explicitly accepted by the user; commit requested. Added handwritten fetch client and restaurant
+state module, name/address list, pagination, loading/empty/error/retry.
+Duplicate loads are prevented; Next respects API offset ceiling 10000. A full
+last page may lead to one empty page because API has no total count. Previous
+remains available. Hash navigation retains the list; refresh resets to page 1.
+No menu browsing until F3, dependencies or backend changes.
+Verification: 6 JS unit tests, 4 browser tests (controlled API responses), and
+2 UI-serving tests passed; existing color/dependency warnings remain. Compose
+rebuilt healthy; real browser smoke through Nginx loaded 3 existing restaurants.
+User changed PAGE_SIZE to 2; retained. Follow-up adds a real-database browser test:
+compose.browser-tests.yaml owns a separate PostgreSQL 17 container on 55432 with
+tmpfs storage, fixed test-only database/user/password, and a separate Compose
+project. Global setup starts it and applies Alembic; teardown removes it.
+Python helper seeds 3 restaurants and commits for API visibility; finally cleanup
+removes them. Each seed resets leftover fixture rows, restricted by fixed endpoint
+and verified DB/user identity. No normal .env database settings used by helper.
+Playwright app uses matching explicit test settings. UI_BASE_URL runs skip real
+DB fixtures and run mocked tests only. No normal application data modified.
+Updated pagination unit/mock tests for PAGE_SIZE=2. Verification: 6 unit tests and
+5 browser tests passed (11.5s browser suite); Docker ps confirmed test container
+removed. User approved F2, fixture setup/teardown and trace shortcuts for commit.
+Next milestone is F3 menu browsing; not started.
+Added requested trace shortcuts: npm run test:trace retains all test traces;
+npm run trace lists current trace.zip archives and opens the selected number.
+No additional dependencies; Enter cancels and missing traces show guidance.
 F1.1 extracts routeFromHash/viewForRoute into app/ui/routes.js, imported by the
 browser and Node tests. app.js now loads as a browser module. Added package.json
 with type=module and test:unit; no npm dependencies or application build step.

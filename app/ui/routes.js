@@ -1,7 +1,7 @@
 const views = {
   '/restaurants': {
     title: 'Restaurants',
-    description: 'Restaurant browsing will be available in the next UI milestone.',
+    description: 'Browse restaurants. Menu browsing is coming next.',
   },
   '/login': {
     title: 'Log in',
