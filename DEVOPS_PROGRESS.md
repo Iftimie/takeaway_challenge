@@ -107,6 +107,16 @@ of D1 and does not authorize creating AWS resources.
 
 ## Latest verification
 
+- D7 simplification requested: SSH allows any IPv4 address, with key authentication
+  and password login disabled. Removed ssh_cidr variable and workflow input; tests
+  cover the sole TCP/22 rule and cloud-init authentication settings. User approved
+  this simplification and authorized pushing it; D7 as a whole remains in progress.
+  No live firewall changed; no server created. Previous saved QA plan is stale:
+  generate a new plan before any apply. Checksum fix amended/pushed as 7f630d3.
+  Verification: format/validate and Git whitespace checks passed; 1 mocked test
+  passed with firewall, password-login and authorized-key assertions.
+  GitHub run and live SSH verification remain pending.
+
 - D7 checkpoint committed/pushed as 0dfc332; plan run 34698405042 failed during
   validation after AWS identity and S3 backend initialization passed. The Windows
   lockfile lacked the Linux unpacked-provider checksum with read-only init.

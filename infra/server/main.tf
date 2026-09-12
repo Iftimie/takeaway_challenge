@@ -31,14 +31,6 @@ variable "ssh_public_key" {
   }
 }
 
-variable "ssh_cidr" {
-  type = string
-  validation {
-    condition     = can(cidrnetmask(var.ssh_cidr)) && endswith(var.ssh_cidr, "/32")
-    error_message = "SSH access must be restricted to one IPv4 address (/32)."
-  }
-}
-
 locals {
   name = "takeaway-${var.environment}"
   tags = {
@@ -88,7 +80,7 @@ resource "aws_lightsail_instance_public_ports" "server" {
     protocol  = "tcp"
     from_port = 22
     to_port   = 22
-    cidrs     = [var.ssh_cidr]
+    cidrs     = ["0.0.0.0/0"]
   }
 }
 

@@ -2,11 +2,6 @@ name: Plan QA infrastructure
 
 on:
   workflow_dispatch:
-    inputs:
-      ssh_cidr:
-        description: 'Your public IPv4 address followed by /32 (SSH access)'
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -34,7 +29,6 @@ jobs:
       TF_INPUT: 'false'
       TF_VAR_environment: qa
       TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
-      TF_VAR_ssh_cidr: ${{ inputs.ssh_cidr }}
     steps:
       - uses: actions/checkout@v6
         with:

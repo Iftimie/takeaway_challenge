@@ -24,7 +24,8 @@ No Git remote was configured when D1 was inspected; recording this URL does not 
 ## Request and release flow
 
 Browser -> environment public IP over HTTPS -> Nginx -> app -> PostgreSQL.
-Only web ports are public; SSH access is controlled separately. Neither Uvicorn
+SSH is reachable from any IPv4 address, with key authentication and password login
+disabled (user-selected simplification). Web ports are added with deployment. Neither Uvicorn
 nor PostgreSQL needs a public port. The UI and API share an origin.
 Use trusted IP certificates with automated renewal, subject to D9 verification.
 No domain, load balancer, managed database or Kubernetes is planned.
@@ -110,8 +111,8 @@ See [AWS metric lifecycle documentation](https://docs.aws.amazon.com/AmazonCloud
 - D5: configure Iftimie as production approver with self-approval allowed, while
   still requiring the explicit approval step. Restrict deployment branches.
 - D7/D12: verify Lightsail/monitoring availability under the current account
-  restrictions and settle CloudWatch publishing authentication. Also settle SSH
-  firewall access for GitHub runners and verify the server host key.
+  restrictions and settle CloudWatch publishing authentication. Verify the SSH
+  server host key before deployment.
 - D9: verify the certificate client, IP issuance and automatic renewal before
   claiming trusted HTTPS works.
 - D12–D14: choose the small metric set, retention, thresholds and notification email.

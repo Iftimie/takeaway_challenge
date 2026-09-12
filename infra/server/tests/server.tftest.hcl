@@ -2,27 +2,26 @@ mock_provider "aws" {}
 
 variables {
   ssh_public_key = "ssh-rsa dGVzdA== test-only"
-  ssh_cidr       = "192.0.2.1/32"
 }
 
-run "qa_isolated_access" {
+run "qa_key_based_ssh" {
   command = plan
   assert {
     condition     = aws_lightsail_instance.server.name == "takeaway-qa"
     error_message = "Default configuration must target QA."
   }
   assert {
-    condition = alltrue([for rule in aws_lightsail_instance_public_ports.server.port_info :
-      rule.from_port == 22 && rule.to_port == 22 && rule.cidrs == toset([var.ssh_cidr])
+    condition = length(aws_lightsail_instance_public_ports.server.port_info) == 1 && alltrue([for rule in aws_lightsail_instance_public_ports.server.port_info :
+      rule.protocol == "tcp" && rule.from_port == 22 && rule.to_port == 22 && rule.cidrs == toset(["0.0.0.0/0"])
     ])
-    error_message = "D7 must expose only SSH to the configured address."
+    error_message = "D7 must expose only TCP SSH, from any IPv4 address."
   }
-}
-
-run "reject_public_ssh" {
-  command = plan
-  variables {
-    ssh_cidr = "0.0.0.0/0"
+  assert {
+    condition     = yamldecode(aws_lightsail_instance.server.user_data).ssh_pwauth == false
+    error_message = "Public SSH must keep password login disabled."
   }
-  expect_failures = [var.ssh_cidr]
+  assert {
+    condition     = yamldecode(aws_lightsail_instance.server.user_data).users[1].ssh_authorized_keys == [var.ssh_public_key]
+    error_message = "The deployment account must use the supplied SSH public key."
+  }
 }

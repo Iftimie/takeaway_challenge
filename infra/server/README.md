@@ -9,7 +9,7 @@ The qa backend stores state separately from bootstrap.
 ## GitHub plan
 
 After this workflow is pushed to main, open Actions -> Plan QA infrastructure ->
-Run workflow. Supply your public IPv4 followed by /32. The workflow uses the qa
+Run workflow. No IP input is required. The workflow uses the qa
 environment's AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY secrets and
 SSH_PUBLIC_KEY variable. The private SSH key is not needed for planning.
 
@@ -28,8 +28,7 @@ terraform '-chdir=infra/server' providers lock -platform=windows_amd64 -platform
 ```
 
 For local inspection and eventual teardown, use AWS_PROFILE=takeaway.
-Set TF_VAR_ssh_public_key from ~/.ssh/takeaway_qa.pub and TF_VAR_ssh_cidr to your
-current public IPv4 plus /32, then:
+Set TF_VAR_ssh_public_key from ~/.ssh/takeaway_qa.pub, then:
 
 ```powershell
 terraform '-chdir=infra/server' init '-backend-config=qa.s3.tfbackend'
@@ -40,15 +39,16 @@ terraform '-chdir=infra/server' apply qa.tfplan
 
 Only the public key enters Terraform. The private key is stored outside the repo
 and uploaded to GitHub's qa environment as SSH_PRIVATE_KEY. Never commit it.
-The saved plan is ignored by Git and contains the planned IP restriction.
+The saved plan is ignored by Git. Generate a fresh plan after configuration changes.
 
 Cloud-init installs Ubuntu's Docker/Compose packages and creates deploy with access
 to Docker and /opt/takeaway. Docker group membership effectively grants host-level
 control; this is a dedicated QA key, not a command-restricted deployment credential.
 The Ubuntu administrative account also uses this key. Password SSH login is disabled.
 
-Only SSH from the configured /32 is exposed. Web ports and GitHub runner access
-are later deployment steps. No app or database containers are started in D7.
+Only SSH is exposed, from any IPv4 address (0.0.0.0/0), so local and GitHub runner
+IPs need no allowlist. Login requires the SSH key; password login is disabled.
+Web ports are added later. No app or database containers are started in D7.
 On creation, verify cloud-init completion, Docker/Compose versions, deploy login
 and firewall rules. Verify SSH host identity using an independent AWS console
 channel before trusting the first SSH connection. A real server has not yet been
