@@ -6,10 +6,10 @@ from app.auth.schemas import EmailRequest
 
 
 class StaffCreate(EmailRequest):
-    password: SecretStr = Field(min_length=8, max_length=128)
+    password: SecretStr = Field(min_length=8, max_length=128, json_schema_extra={"sensitive": True})
     name: Annotated[
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
-    ]
+    ] = Field(json_schema_extra={"sensitive": True})
 
 
 class AssignmentResponse(BaseModel):

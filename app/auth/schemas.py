@@ -14,7 +14,7 @@ from pydantic import (
 class EmailRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    email: EmailStr = Field(max_length=320)
+    email: EmailStr = Field(max_length=320, json_schema_extra={})
 
     @field_validator("email", mode="before")
     @classmethod
@@ -28,21 +28,21 @@ class EmailRequest(BaseModel):
 
 
 class RegisterRequest(EmailRequest):
-    password: SecretStr = Field(min_length=8, max_length=128)
+    password: SecretStr = Field(min_length=8, max_length=128, json_schema_extra={"sensitive": True})
     name: Annotated[
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
-    ]
+    ] = Field(json_schema_extra={"sensitive": True})
     default_address: Annotated[
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)
-    ] | None = None
+    ] | None = Field(default=None, json_schema_extra={"sensitive": True})
 
 
 class LoginRequest(EmailRequest):
-    password: SecretStr = Field(min_length=1, max_length=128)
+    password: SecretStr = Field(min_length=1, max_length=128, json_schema_extra={"sensitive": True})
 
 
 class TokenResponse(BaseModel):
-    access_token: str
+    access_token: str = Field(json_schema_extra={"sensitive": True})
     token_type: str = "bearer"
 
 
@@ -50,7 +50,7 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    email: str
-    name: str
+    email: str = Field(json_schema_extra={})
+    name: str = Field(json_schema_extra={"sensitive": True})
     role: str
-    default_address: str | None
+    default_address: str | None = Field(json_schema_extra={"sensitive": True})

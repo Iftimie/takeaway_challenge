@@ -22,8 +22,23 @@
 - Milestone 17: explicitly accepted and committed (`adec890`).
 - Milestone 18: explicitly accepted and committed (`d7b105c`).
 - Milestone 19: explicitly accepted and committed (`0b4e92c`).
-- Milestone 20: explicitly accepted; user requested its commit.
-- Next step: milestone 21 (request logging), authorized by the user.
+- Milestone 20: explicitly accepted and committed (`1bfafa4`).
+- Milestone 21: logging and schema-driven redaction explicitly accepted by the user.
+- Redaction step 1: accepted by the user; emails intentionally left visible.
+- Redaction step 2: schema-aware request/response logging accepted by the user.
+  All 401 tests pass with two existing dependency warnings. No new dependencies
+  or migrations. Payloads use the declared schema and redact marked fields;
+  invalid requests log field locations/error types only. Unknown schemas are
+  omitted. Each redacted payload is capped at 4 KiB, with a 64 KiB raw inspection
+  ceiling; validation details include at most 20 errors and are also bounded.
+  API responses remain unchanged. Unexpected failures omit bodies and retain
+  exception class only. User requested the milestone 21 commit.
+  Rebuilt Compose services are healthy. Live Nginx checks passed for registration,
+  login, profile and invalid input: marked values absent from logs, email visible
+  in app logs only, response IDs matched proxy logs. Temporary account removed.
+- Performance/metrics/backup scope remains unresolved. No next milestone started.
+- User requested lower token usage: use targeted reads and compact check output;
+  avoid repeating successful checks without a new reason.
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -94,7 +109,7 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 Milestones 1-17 are **accepted**;
 Milestones 18-19 are **accepted**;
-Milestone 20 is **accepted**; milestone 21 is **not started**.
+Milestone 20 is **accepted**; milestone 21 is **awaiting review**.
 Each is a separate review stop and includes relevant tests or
 operational verification.
 
@@ -120,7 +135,7 @@ operational verification.
 | 18 | Status transitions | Assigned staff advance orders through the agreed sequence; invalid transitions and competing updates are handled and tested. |
 | 19 | Application container | Docker builds and runs Uvicorn; container health endpoint passes smoke test. |
 | 20 | Full Compose deployment | Nginx proxies to application connected to PostgreSQL; startup and migration instructions pass smoke test. |
-| 21 | Request logging | Logs include request IDs and useful failure context without passwords, tokens, addresses, or request bodies; behavior is verified. |
+| 21 | Request logging | Logs include request IDs and useful failure context. User revised scope to permit schema-redacted bodies: review annotations/serializer first, then integrate bounded payload logging with tests. |
 
 Order creation intentionally keeps transactions and idempotency together so the
 endpoint is not considered complete without retry safety.
@@ -138,6 +153,40 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 21 redaction step 1: added app/log_redaction.py to_log_dict(BaseModel).
+  Sensitive fields use Field(json_schema_extra={"sensitive": True}); passwords,
+  tokens, personal names/emails and delivery/default addresses are marked in
+  auth, staff, and order schemas. Public restaurant/menu fields and IDs remain visible.
+- Serializer traverses declared nested models/lists, masks entire marked fields
+  and SecretStr/SecretBytes, encodes Decimal/date values, and omits unstructured
+  dicts/arbitrary objects. Model extras excluded; raw dictionary input rejected.
+  Normal model/API serialization unchanged. New fields still require sensitivity review.
+- Verification: 389 tests passed (9 new), with 2 existing dependency warnings.
+  Covers inherited fields, tokens, nested request/response models, no mutation,
+  whole-field redaction, unknown extras/dicts and safe value preservation.
+- Middleware not integrated with serializer yet; no bodies logged. No migration
+  or dependency added; running containers not rebuilt for this helper-only step.
+  All milestone 21 changes remain uncommitted; stop for step 1 review.
+- Milestone 21: request middleware generates UUID IDs, returns X-Request-ID,
+  and writes JSON summaries with method, route template, status, duration_ms.
+  Unknown paths omitted. Incoming IDs ignored; no bodies, query strings, raw
+  parameter values, auth headers, cookies, IPs, or user details in summaries.
+- Unexpected endpoint exceptions return generic 500 and log exception class
+  only, without messages/tracebacks. Existing simulated write-failure test now
+  asserts safe 500 plus rollback/key reuse instead of a propagated exception.
+- Docker/local instructions disable Uvicorn access logs. Nginx access summary
+  includes response request ID/status/duration only; server error log disabled
+  because raw errors may contain URLs/IPs. Startup checks remain available.
+- Verification: 380 tests passed (8 new), with 2 existing dependency warnings.
+  Rebuilt/recreated Compose stack healthy; nginx -t passed. Live 200/404/422
+  requests had matching app/proxy IDs with synthetic path/query/body/header
+  markers absent from both services' logs. No test data written by probes.
+- No dependencies or migrations added; head0006. Stack running for review.
+  Duration ends when response headers are ready; future streaming/background
+  task failures require separate handling. Infrastructure/database logs and
+  retention/aggregation are outside this HTTP logging implementation. Reduced
+  error detail is intentional; local debugging is needed for full traceback.
+  Milestone 21 remains uncommitted; nothing pushed. Open scope questions retained.
 - Milestone 20: Compose shares app settings via YAML anchor, connects to db:5432,
   waits for DB health, runs one-off migrations, then starts app and Nginx after
   successful migration/app health. Nginx exposes localhost HTTP_PORT (default8080),

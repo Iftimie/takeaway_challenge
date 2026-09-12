@@ -24,7 +24,7 @@ avoids needing to activate it or change PowerShell execution policy.
 ## Run
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --no-access-log
 ```
 
 Uvicorn serves the FastAPI application: `app.main:app` means the `app` object in
@@ -168,7 +168,7 @@ With PostgreSQL running, apply migrations before running database tests:
 .\.venv\Scripts\python.exe -m pytest -q -m integration
 ```
 
-Expected: `366 passed, 6 deselected`. Tests check connectivity, user-table
+Expected: `366 passed, 35 deselected`. Tests check connectivity, user-table
 constraints, registration, authentication, admin provisioning, and restaurants.
 Most tests insert rows inside transactions and roll them back after
 each test. Order concurrency tests commit temporary records across connections
@@ -179,7 +179,7 @@ tests. VS Code can also discover and run individual tests without a marker overr
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: `372 passed` when PostgreSQL is running and migrations are applied.
+Expected: `401 passed` when PostgreSQL is running and migrations are applied.
 To run only tests that do not need Docker, use
 `python -m pytest -q -m "not integration"` with the virtual environment's Python.
 Registration tests use an outer transaction and session savepoints, so endpoint
@@ -643,7 +643,8 @@ items return 409. Assigned staff update status through the endpoint below.
 .\.venv\Scripts\python.exe -m pytest tests/test_order_creation.py tests/test_order_concurrency.py -q
 ```
 
-Expected: `43 passed`, with PostgreSQL running and migration 0006 applied.
+Expected: `46 passed`, with PostgreSQL running and migration 0006 applied (includes
+the three status-concurrency tests added in milestone 18).
 Concurrency tests use separate connections and observe actual PostgreSQL lock
 waits. They commit temporary test records, then clean up only those records.
 Other order-creation tests roll back their data. No new dependency or migration
@@ -848,7 +849,108 @@ Verified through Nginx: health, database-backed browsing, docs/OpenAPI, unauthor
 access rejection, login, profile, and customer order listing. The temporary test
 account was deleted afterward. The stack is left running for review.
 
+## Request logging
+
+Every application HTTP response receives a generated `X-Request-ID`. Incoming
+request IDs are ignored, preventing client-supplied personal data from entering
+logs. The app writes one JSON request summary to stderr, for example:
+
+```json
+{"request_id":"a-generated-uuid","method":"GET","route":"/orders/{order_id}","status":200,"duration_ms":4.12}
+```
+
+Route templates replace actual path values; unmatched URLs use `<unmatched>`.
+Query strings, raw bodies, headers, cookies, and client IPs are excluded.
+Schema-backed routes add redacted payloads as described below.
+Duration measures application handling until response
+headers are ready, not full network transmission. Entries use INFO for success,
+WARNING for 4xx, and ERROR for 5xx.
+
+Unexpected application exceptions return `{"detail":"Internal server error"}`
+with status 500 and a request ID. The summary includes the exception class, such
+as `RuntimeError`, without its message or traceback, since those may contain SQL
+parameters or credentials. This limits diagnosis detail; use local debugging to
+investigate the matching code. The middleware covers the current JSON endpoints,
+not failures in a future streaming response or background task.
+
+Run local Uvicorn with `--no-access-log` as shown above. The Docker command already
+includes it, avoiding duplicate raw URL/IP access logs. Nginx writes a minimal
+JSON access summary with status, duration, and the app's response request ID;
+it does not log request paths, headers, or client addresses. Its server error
+log is disabled because raw error messages can contain those values. Requests
+rejected before reaching the app can have an empty Nginx request ID. Startup
+configuration checks remain available via `nginx -t`.
+
+```powershell
+docker --context desktop-linux compose logs --tail 30 app nginx
+.\.venv\Scripts\python.exe -m pytest tests/test_request_logging.py -q
+```
+
+Expected: `8 passed`; these logging tests do not require PostgreSQL. They check
+ID matching/uniqueness, errors and validation, path/query/header/body exclusion,
+and concurrent requests. Database/infrastructure logs are separate from these
+HTTP summaries; this milestone does not configure log retention or aggregation.
+The rebuilt Compose stack was also checked with synthetic private values: app
+and Nginx logs shared response IDs and omitted those values for 200, 404, and
+422 requests. The stack remains running for review.
+
+## Schema redaction
+
+Sensitive schema fields now declare metadata, for example:
+
+```python
+access_token: str = Field(json_schema_extra={"sensitive": True})
+```
+
+`app.log_redaction.to_log_dict(model)` builds a separate representation for logs:
+
+```python
+from app.auth.schemas import TokenResponse
+from app.log_redaction import to_log_dict
+
+response = TokenResponse(access_token="example-token")
+to_log_dict(response)
+# {"access_token": "[REDACTED]", "token_type": "bearer"}
+```
+
+This does not change the original object or normal API serialization. The metadata
+alone does not redact anything; code must call this helper when producing logs.
+`PayloadLoggingRoute` connects this helper to the existing request summary,
+adding `request_body` and `response_body` using each route's declared schemas.
+
+The helper follows declared fields through nested models and lists, replaces
+marked values with `[REDACTED]`, and also masks Pydantic secret types. Decimal
+values become strings and dates use ISO format. Extra fields are excluded;
+unstructured dictionaries and unsupported objects become `[OMITTED]`. Top-level
+input must be a Pydantic model, not raw JSON or a dictionary.
+
+Personal names, delivery/default addresses, passwords, and tokens are marked.
+Emails intentionally remain visible, as requested. Public restaurant/menu names,
+restaurant addresses, and numeric IDs also remain visible. New fields require
+sensitivity review; this is not automatic PII detection.
+
+Invalid requests omit the body and log only validation field locations and error
+types, never rejected values or error messages. Unknown field names are masked.
+Bodies without a supported model schema are omitted, including error responses.
+Handled HTTP errors can retain the schema-redacted request; unexpected exceptions
+omit bodies. Health/docs routes retain their summary-only logging.
+
+Each redacted payload has a 4 KiB UTF-8 JSON limit; larger payloads receive
+`{"omitted": "size_limit"}`. Bodies above 64 KiB are not parsed again for logging.
+Validation details include at most 20 errors and use the same 4 KiB limit.
+These limits affect logs only; API requests and responses are unchanged.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/test_log_redaction.py -q
+.\.venv\Scripts\python.exe -m pytest tests/test_payload_logging.py -q
+```
+
+Expected: `9 passed` and `12 passed`, without PostgreSQL. The integration tests
+cover redacted requests/responses, nested lists, invalid input, size limits,
+missing schemas, and failures. No new dependencies or migrations.
+
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Request logging belongs to the next milestone.
+milestones, and review status. Payload logging is accepted; the recorded
+performance/metrics/backup scope decisions remain.

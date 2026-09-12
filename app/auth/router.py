@@ -8,7 +8,9 @@ from app.auth.service import EmailAlreadyRegistered, authenticate_user, register
 from app.auth.tokens import create_access_token
 from app.db import get_session
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+from app.payload_logging import PayloadLoggingRoute
+
+router = APIRouter(prefix="/auth", tags=["auth"], route_class=PayloadLoggingRoute)
 
 
 @router.post("/login", response_model=TokenResponse)

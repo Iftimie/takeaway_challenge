@@ -9,8 +9,10 @@ from app.staff.router import router as staff_router
 from app.menu.router import router as menu_router
 from app.orders.router import router as orders_router
 from app.orders.staff_router import router as staff_orders_router
+from app.request_logging import RequestLoggingMiddleware
 
 app = FastAPI(title="Takeaway Service")
+app.add_middleware(RequestLoggingMiddleware)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(restaurants_router)

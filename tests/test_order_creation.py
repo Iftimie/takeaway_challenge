@@ -187,8 +187,9 @@ def test_write_failure_rolls_back_order_and_key(checkout):
 
     event.listen(connection, "before_cursor_execute", fail_items)
     try:
-        with pytest.raises(RuntimeError, match="Simulated item write failure"):
-            client.post("/orders", json=data, headers=headers)
+        response = client.post("/orders", json=data, headers=headers)
+        assert response.status_code == 500
+        assert response.json() == {"detail": "Internal server error"}
     finally:
         event.remove(connection, "before_cursor_execute", fail_items)
     assert counts(connection, user_id) == (0, 0)

@@ -10,8 +10,10 @@ from app.models import Order, OrderItem
 from app.orders.schemas import OrderResponse, OrderStatusUpdate
 from app.orders.service import OrderProblem, order_response, update_order_status
 
+from app.payload_logging import PayloadLoggingRoute
+
 router = APIRouter(prefix="/restaurants/{restaurant_id}/orders", tags=["staff orders"],
-                   dependencies=[Depends(require_assigned_staff)])
+                   dependencies=[Depends(require_assigned_staff)], route_class=PayloadLoggingRoute)
 
 
 @router.patch("/{order_id}/status", response_model=OrderResponse)

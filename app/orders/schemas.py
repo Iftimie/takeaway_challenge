@@ -24,8 +24,8 @@ class OrderCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     restaurant_id: PositiveId
-    delivery_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
-    delivery_address: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
+    delivery_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)] = Field(json_schema_extra={"sensitive": True})
+    delivery_address: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)] = Field(json_schema_extra={"sensitive": True})
     items: list[OrderLineCreate] = Field(min_length=1, max_length=100)
 
     @model_validator(mode="after")
@@ -48,8 +48,8 @@ class OrderLineResponse(BaseModel):
 class OrderResponse(BaseModel):
     id: int
     restaurant_id: int
-    delivery_name: str
-    delivery_address: str
+    delivery_name: str = Field(json_schema_extra={"sensitive": True})
+    delivery_address: str = Field(json_schema_extra={"sensitive": True})
     status: str
     total: Decimal
     currency: str

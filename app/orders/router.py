@@ -10,7 +10,9 @@ from app.models import Order, User
 from app.orders.schemas import OrderCreate, OrderResponse, OrderSummary
 from app.orders.service import OrderProblem, create_order, order_response
 
-router = APIRouter(prefix="/orders", tags=["orders"])
+from app.payload_logging import PayloadLoggingRoute
+
+router = APIRouter(prefix="/orders", tags=["orders"], route_class=PayloadLoggingRoute)
 
 
 def require_customer(user: Annotated[User, Depends(get_current_user)]) -> User:

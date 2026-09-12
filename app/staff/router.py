@@ -11,7 +11,9 @@ from app.db import get_session
 from app.models import Restaurant, StaffAssignment, User
 from app.staff.schemas import AssignmentResponse, StaffCreate
 
-router = APIRouter(prefix="/staff", tags=["staff"], dependencies=[Depends(require_admin)])
+from app.payload_logging import PayloadLoggingRoute
+
+router = APIRouter(prefix="/staff", tags=["staff"], dependencies=[Depends(require_admin)], route_class=PayloadLoggingRoute)
 
 
 @router.post("", response_model=UserResponse, status_code=201)

@@ -9,7 +9,9 @@ from app.db import get_session
 from app.menu.schemas import MenuItemCreate, MenuItemResponse, MenuItemUpdate
 from app.models import MenuItem, Restaurant
 
-router = APIRouter(prefix="/restaurants/{restaurant_id}/menu-items", tags=["menu"])
+from app.payload_logging import PayloadLoggingRoute
+
+router = APIRouter(prefix="/restaurants/{restaurant_id}/menu-items", tags=["menu"], route_class=PayloadLoggingRoute)
 
 
 @router.get("", response_model=list[MenuItemResponse])
