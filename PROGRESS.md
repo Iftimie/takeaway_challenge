@@ -21,8 +21,9 @@
 - Milestone 16: explicitly accepted and manually committed by user (`f87b809`).
 - Milestone 17: explicitly accepted and committed (`adec890`).
 - Milestone 18: explicitly accepted and committed (`d7b105c`).
-- Milestone 19: explicitly accepted; user requested its commit.
-- Next step: milestone 20 (full Compose deployment), authorized by the user.
+- Milestone 19: explicitly accepted and committed (`0b4e92c`).
+- Milestone 20: explicitly accepted; user requested its commit.
+- Next step: milestone 21 (request logging), authorized by the user.
 - The workspace was empty at initial inspection and was not a Git repository.
 - FastAPI skeleton and health test added; dependencies installed in `.venv`.
 - Git initialized on `main` at the user's request, with an initial baseline
@@ -93,7 +94,7 @@ workflows. Start with one models file; avoid a generic repository abstraction.
 
 Milestones 1-17 are **accepted**;
 Milestones 18-19 are **accepted**;
-milestones 20-21 are **not started**.
+Milestone 20 is **accepted**; milestone 21 is **not started**.
 Each is a separate review stop and includes relevant tests or
 operational verification.
 
@@ -137,6 +138,22 @@ or business endpoints in milestone 1.
 
 ## Latest verification and limitations
 
+- Milestone 20: Compose shares app settings via YAML anchor, connects to db:5432,
+  waits for DB health, runs one-off migrations, then starts app and Nginx after
+  successful migration/app health. Nginx exposes localhost HTTP_PORT (default8080),
+  app has no host port; existing PostgreSQL volume and localhost port retained.
+- nginx/default.conf proxies to app:8000; mounted read-only. .env.example includes
+  HTTP_PORT. Compose requires nonempty JWT_SECRET, including DB-only commands;
+  README initial setup now generates it only when absent/empty.
+- Verification: compose config passed; image built; migrate exited 0/head0006;
+  db/app/nginx healthy; nginx -t passed. Through Nginx verified HTTP health,
+  restaurant DB read, docs/OpenAPI, 401, login, profile, and customer orders.
+  Temporary account inserted and deleted by exact ID; no test account retained.
+- Stack left running at localhost:8080 for review. No Python changes or new
+  dependency/schema migration. No TLS, restart policy, zero-downtime upgrade, or
+  production sizing. Nginx resolves app at startup; documented whole-stack restart
+  after rebuild preserves volume and refreshes that address. No full Python suite
+  rerun for configuration-only changes. Milestone 20 uncommitted; nothing pushed.
 - Milestone 19: Dockerfile uses python:3.11-slim, installs the application without
   test extras, includes Alembic/migrations, and runs Uvicorn on 0.0.0.0:8000 as
   appuser UID 10001. Standard-library HTTP health check; no reload. .dockerignore

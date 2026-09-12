@@ -82,12 +82,15 @@ Create the local configuration once; keep an existing `.env` if you have one:
 
 ```powershell
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+.\.venv\Scripts\python.exe -c "import secrets; from dotenv import dotenv_values, set_key; values = dotenv_values('.env'); values.get('JWT_SECRET') or set_key('.env', 'JWT_SECRET', secrets.token_urlsafe(48))"
 docker compose config --quiet
 docker compose up -d --wait db
 docker compose ps
 ```
 
 Expected: `db` reports healthy. The first startup downloads the PostgreSQL image.
+The key-generation command preserves an existing nonempty JWT_SECRET and does
+not print it. The full Compose file requires this key even for DB-only commands.
 Compose reads `.env` for the database name, user, password, and host port. The
 example credentials are for local development only; `.env` is ignored by Git.
 The port is bound to `127.0.0.1`, so it is accessible only from this computer.
@@ -769,8 +772,8 @@ and migrations are included, but startup does not run migrations automatically.
 
 This command demonstrates application startup and health without database
 configuration. Database-backed endpoints require runtime database settings and
-JWT authentication requires JWT_SECRET; those are wired through Compose in the
-next milestone. Container localhost refers to the container itself. The health
+JWT authentication requires JWT_SECRET; those are wired through Compose below.
+Container localhost refers to the container itself. The health
 endpoint does not verify database readiness.
 
 Verification performed: image build, Docker health status, HTTP health from both
@@ -779,8 +782,73 @@ secrets/virtual environment, and `pip check`. The temporary test container was
 removed afterward. Image tags and dependency ranges are not locked, so future
 builds can resolve newer patch/minor versions.
 
+## Full Compose deployment
+
+Ensure `.env` contains the database settings and private JWT_SECRET described
+above. If the terminal cannot find `docker-credential-desktop`, add its directory
+to PATH before building. Run from the repository root:
+
+```powershell
+$env:PATH = "$env:LOCALAPPDATA\Programs\DockerDesktop\resources\bin;" + $env:PATH
+docker --context desktop-linux compose config --quiet
+docker --context desktop-linux compose up -d --build --wait
+docker --context desktop-linux compose ps -a
+Invoke-RestMethod http://127.0.0.1:8080/health
+Invoke-RestMethod http://127.0.0.1:8080/restaurants
+```
+
+Expected: `db`, `app`, and `nginx` are healthy; `migrate` exited with code 0.
+Health returns `status: ok`; restaurants returns the current database list.
+Open http://127.0.0.1:8080/docs to register/log in and try the existing endpoints.
+These requests use the real local database.
+
+Compose starts services in this order:
+
+1. PostgreSQL becomes healthy, using the existing named volume.
+2. The one-off `migrate` service runs `alembic upgrade head` and exits.
+3. The application starts after migration success and becomes healthy.
+4. Nginx starts and proxies requests to `app:8000`.
+
+`x-app` and its YAML anchor share the image/build and environment between the
+app and migration service. Within Compose, PostgreSQL is reached at `db:5432`,
+regardless of the host-side POSTGRES_HOST/POSTGRES_PORT values. Secrets are passed
+at runtime, not copied into the image. Migration failure prevents dependent
+services from starting on initial deployment; inspect `compose logs migrate`.
+
+Nginx publishes localhost port 8080 by default; set HTTP_PORT in `.env` to change
+it. Uvicorn has no published host port. PostgreSQL retains its localhost port for
+Python development and tests. Nginx mounts `nginx/default.conf` read-only and
+preserves the request host and authorization header when proxying. This is local
+HTTP deployment; TLS and public internet hosting are not configured.
+
+Useful checks:
+
+```powershell
+docker --context desktop-linux compose exec nginx nginx -t
+docker --context desktop-linux compose exec app python -m alembic current
+docker --context desktop-linux compose logs --tail 50 app nginx migrate
+```
+
+Expected migration: `0006 (head)`. Health checks indicate liveness; the public
+restaurant request also verifies application-to-database connectivity.
+
+For a clean local restart or after rebuilding changed code, use:
+
+```powershell
+docker --context desktop-linux compose down
+docker --context desktop-linux compose up -d --build --wait
+```
+
+`down` preserves the database volume. Do not add `--volumes` for data you want
+to retain. Restarting the whole stack also lets Nginx resolve the app's current
+container address. No automatic restart policy or zero-downtime upgrade is
+configured. `migrate` reruns safely against an already-current schema.
+
+Verified through Nginx: health, database-backed browsing, docs/OpenAPI, unauthorized
+access rejection, login, profile, and customer order listing. The temporary test
+account was deleted afterward. The stack is left running for review.
+
 ## Project notes
 
 See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
-milestones, and review status. Full Compose deployment and request logging
-belong to later milestones.
+milestones, and review status. Request logging belongs to the next milestone.
