@@ -1,16 +1,10 @@
 name: Tests
 
 on:
-  push:
-  pull_request:
-  workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
-
-concurrency:
-  group: tests-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   tests:
@@ -66,10 +60,10 @@ jobs:
             test-results/
           retention-days: 7
       - name: Export tested image
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: github.event.action == 'closed' && github.event.pull_request.merged == true
         run: docker save takeaway-service:browser-tests | gzip > tested-image.tar.gz
       - name: Transfer tested image to publishing job
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: github.event.action == 'closed' && github.event.pull_request.merged == true
         uses: actions/upload-artifact@v7
         with:
           name: tested-image
@@ -80,7 +74,7 @@ jobs:
   publish:
     name: Publish tested image
     needs: tests
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

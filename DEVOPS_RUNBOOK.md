@@ -95,11 +95,15 @@ GHCR and SSH replace ECR/OIDC delivery.
 
 ## Publish images (D6)
 
-The Tests workflow publishes only after all tests pass on main (push or manual
-run). Pull requests and other branches do not publish. The test job exports the
+The reusable Tests workflow publishes after tests pass for a PR merged into main.
+Open PRs and ordinary pushes do not publish. The test job exports the
 Docker image exercised through Nginx; a separate job downloads and pushes that
 same image. Only the publishing job has packages:write permission. Its built-in
 GITHUB_TOKEN authenticates to GHCR; no manually created token is needed.
+
+For the PR checks, QA apply and production plan/approval/apply sequence, including
+environment credentials and private saved-plan permissions, see
+[infra/server/PIPELINE.md](infra/server/PIPELINE.md).
 
 Image name: `ghcr.io/iftimie/takeaway_challenge:<full-commit-sha>`.
 The publishing job's summary records `ghcr.io/iftimie/takeaway_challenge@sha256:...`.

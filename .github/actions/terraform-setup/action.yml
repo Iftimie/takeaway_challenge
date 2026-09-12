@@ -1,0 +1,30 @@
+name: Configure Terraform for an environment
+description: Install the pinned CLI and initialize the selected state backend.
+inputs:
+  environment:
+    description: qa or prod
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: hashicorp/setup-terraform@v4
+      with:
+        terraform_version: '1.16.2'
+        terraform_wrapper: false
+    - name: Check AWS identity and configuration
+      shell: bash
+      env:
+        TARGET_ENVIRONMENT: ${{ inputs.environment }}
+      run: |
+        case "$TARGET_ENVIRONMENT" in qa|prod) ;; *) exit 1 ;; esac
+        test -n "$AWS_ACCESS_KEY_ID"
+        test -n "$AWS_SECRET_ACCESS_KEY"
+        test -n "$TF_VAR_ssh_public_key"
+        account=$(aws sts get-caller-identity --query Account --output text)
+        test "$account" = '455958489157'
+    - name: Initialize state
+      shell: bash
+      working-directory: infra/server
+      env:
+        TARGET_ENVIRONMENT: ${{ inputs.environment }}
+      run: terraform init -backend-config="$TARGET_ENVIRONMENT.s3.tfbackend" -lockfile=readonly -no-color

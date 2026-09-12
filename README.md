@@ -1309,7 +1309,8 @@ Current limitations:
 
 ## GitHub Actions tests (D2)
 
-`.github/workflows/tests.yml` runs on pushes, pull requests and manual dispatch.
+`.github/workflows/pipeline.yml` calls the reusable `tests.yml` for opened/updated
+PRs targeting main and again when merged. Ordinary pushes do not trigger it.
 One Ubuntu job installs Python 3.11 and Node 24, builds the UI, starts disposable
 PostgreSQL and applies migrations, then runs all Python tests, JavaScript unit
 tests and Chromium browser tests through Docker/Nginx. A failing step stops later
@@ -1319,7 +1320,7 @@ The browser database helper uses Docker Desktop on Windows and the active Docker
 context on Linux. Set `DOCKER_CONTEXT` to override this selection. The fixed test
 database credentials and port remain unchanged; this does not use the normal DB.
 
-After pushing the workflow, open the repository's **Actions -> Tests** run.
+Open the repository's **Actions -> PR checks and infrastructure promotion** run.
 On failure, download the `test-failure-reports` artifact (retained for seven days).
 Extract it and run `npx playwright show-report <path-to-playwright-report>` to
 inspect browser failures and their traces. Python results are in
@@ -1329,6 +1330,6 @@ Artifacts contain only synthetic test data; never point this workflow at QA/prod
 
 CI rejects accidentally committed `test.only` calls. JavaScript dependencies use
 the existing lockfile; Python dependencies still use the ranges in `pyproject.toml`,
-so Python installs are not fully pinned. No deployment or image publishing occurs
-in this workflow. The first GitHub run and artifact download must be verified after
-the reviewed changes are pushed.
+so Python installs are not fully pinned. Merged PRs also publish the tested image.
+See [infra/server/PIPELINE.md](infra/server/PIPELINE.md) for infrastructure planning,
+QA apply and production approval. Application deployment is still pending.
