@@ -969,6 +969,19 @@ missing schemas, and failures. No new dependencies or migrations.
 
 ## Project notes
 
+### Customer registration (F5)
+
+Open `/ui/#/register` or click Register. Enter email, password (8–128 characters),
+name and optional default delivery address. Browser validation covers basic
+constraints; API field errors appear beside inputs. Duplicate emails are
+explained, and failed requests can be retried. Passwords clear on submission;
+other entered values remain on errors. An empty optional address is sent as null.
+
+Success shows Account created and a login link. Registration always creates a
+customer, with no role selector or automatic login. The real database browser
+test creates an account and logs in to verify it, then removes fixture records.
+Current suites: 16 JavaScript unit tests and 8 browser tests.
+
 ### Vue component structure
 
 `app/ui/index.html` is now the entry shell. `app.js` mounts `App.vue`, which owns
@@ -986,7 +999,7 @@ Unit tests still import plain JavaScript and require no build. Direct
 
 Open `/ui/#/login` and enter an existing customer, staff or admin account. The
 browser calls the existing login API and then `/users/me` for identity and role.
-The header shows the name/role and a Log out button. Registration is still F5.
+The header shows the name/role and a Log out button. Registration is available via Register.
 
 The JWT is saved in tab-scoped sessionStorage, so page refresh preserves login.
 No password is stored. Logout clears the saved token and user identity and
@@ -1049,7 +1062,7 @@ From the repository root:
 npm run test:unit
 ```
 
-Expected: 13 passed including restaurant/menu/session tests. If PowerShell blocks npm.ps1, use `npm.cmd run test:unit`.
+Expected: 16 passed including registration tests. If PowerShell blocks npm.ps1, use `npm.cmd run test:unit`.
 Tests cover empty hashes, known routes, and unknown routes (including inherited
 object property names). They import the same `app/ui/routes.js` used by the UI.
 `app.js` is loaded with `type="module"` so it can import these functions directly.
@@ -1104,7 +1117,7 @@ $env:UI_BASE_URL = 'http://localhost:8080'
 try { npm run test:browser } finally { Remove-Item Env:UI_BASE_URL }
 ```
 
-This runs 4 controlled-response tests, skips the 3 real DB tests, and never seeds or
+This runs 4 controlled-response tests, skips the 4 real DB tests, and never seeds or
 cleans the normal deployment. It skips temporary-server/database startup and
 leaves Compose running. To see the
 browser during either run, use `npm run test:browser -- --headed`.

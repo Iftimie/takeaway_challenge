@@ -1,4 +1,5 @@
 <script>
+import RegisterView from './components/RegisterView.vue';
 import LoginView from './components/LoginView.vue';
 import RestaurantList from './components/RestaurantList.vue';
 import MenuView from './components/MenuView.vue';
@@ -10,7 +11,7 @@ import { restaurantState, canGoNext, loadRestaurants } from './restaurants.js';
 import { sessionState, login, logout, restoreSession } from './session.js';
 
 export default {
-  components: { LoginView, RestaurantList, MenuView },
+  components: { LoginView, RestaurantList, MenuView, RegisterView },
   data() {
     return { route: routeFromHash(window.location.hash), restaurants: restaurantState(), pageSize: PAGE_SIZE, menu: menuState(0),
       session: sessionState(window.sessionStorage), email: '', password: '' };
@@ -67,12 +68,14 @@ export default {
         <a href="#/restaurants" :aria-current="route === '/restaurants' ? 'page' : null">Restaurants</a>
         <a href="#/login" :aria-current="route === '/login' ? 'page' : null">{{ session.user ? 'Account' : 'Log in' }}</a>
         <span v-if="session.user">{{ session.user.name }} ({{ session.user.role }})</span>
+        <a v-if="!session.user" href="#/register" :aria-current="route === '/register' ? 'page' : null">Register</a>
         <button v-if="session.user" @click="signOut" :disabled="session.loading">Log out</button>
       </nav>
     </header>
     <main>
       <h1>{{ view.title }}</h1>
       <p>{{ view.description }}</p>
+      <RegisterView v-if="route === '/register'" />
       <LoginView v-if="route === '/login'" :session="session" v-model:email="email" v-model:password="password" @submit="submitLogin" />
       <RestaurantList v-if="route === '/restaurants'" :restaurants="restaurants" :page-size="pageSize" :has-next-page="hasNextPage" @load-page="loadPage" />
       <MenuView v-if="menuId" :menu="menu" :page-size="pageSize" :has-next-menu-page="hasNextMenuPage" @load-page="loadMenuPage" />

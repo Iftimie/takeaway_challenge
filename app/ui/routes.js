@@ -1,4 +1,5 @@
 const views = {
+  '/register': { title: 'Create account', description: 'Register as a customer to place orders.' },
   '/restaurants': {
     title: 'Restaurants',
     description: 'Choose a restaurant to browse its menu.',

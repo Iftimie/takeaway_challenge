@@ -133,7 +133,21 @@ Browser/trace npm commands build first. Verification: build, 13 unit tests and
 7 browser tests passed. Two UI-serving tests passed (2 existing warnings).
 Multi-stage Docker rebuild healthy; 4 browser checks passed through Nginx,
 3 isolated-DB tests skipped as designed. F4 approved for commit, including Vue SFC
-build refactor. Next authorized milestone: F5 customer registration.
+build refactor. F4 committed as 2ec3b7b.
+F5 accepted; user requested commit. RegisterView.vue and /register hash route,
+customer email/password/name/optional address form. Uses existing API; explicit
+payload excludes roles. Field validation, duplicate email, network/failure and
+success feedback; success links to login without automatic authentication.
+Password clears on submission; other inputs retained on errors and cleared on
+success. Submit disabled while pending. Blank optional address becomes null.
+No backend/dependency changes. Real isolated-DB browser journey covers validation,
+duplicate email, successful creation and login as customer; teardown removes it.
+Verification: 16 unit tests and 8 browser tests passed (20.7s). No F5 commit
+requested; stop for review.
+F5 follow-up verification: 2 UI-serving tests passed (2 existing warnings),
+Docker Compose rebuild completed healthy and git diff --check passed.
+F6 authorized: cart uses sessionStorage to survive refresh, as requested. Backend
+limits are 100 distinct items and quantity 1-100 per item.
 Added requested trace shortcuts: npm run test:trace retains all test traces;
 npm run trace lists current trace.zip archives and opens the selected number.
 No additional dependencies; Enter cancels and missing traces show guidance.
