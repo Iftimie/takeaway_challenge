@@ -1154,7 +1154,7 @@ request is needed. Python package data includes built UI assets.
 F1 originally provided Restaurants and Log in placeholders. F2 adds the real
 restaurant list; F4 adds login. Click between views,
 use Back/Forward, and refresh `/ui/#/login`: the correct heading should appear.
-Unknown hashes display Page not found. Checkout remains a future milestone.
+Unknown hashes display Page not found. Checkout and role-specific workflows are now available.
 `/docs` remains available.
 
 Focused verification:
@@ -1218,4 +1218,45 @@ sessionStorage, including delivery details. Retry order resends exactly that
 request, including after refresh. Cart editing pauses until it is resolved.
 Signing out retains an unresolved checkout; only its original customer can retry
 it. Closing the tab loses this recovery state. Successful confirmation is shown
-in memory; order history comes in F8. No payment or automatic retry is added.
+in memory; completed orders remain available under My orders. No payment or automatic retry is added.
+
+## UI review and Nginx browser checks (F13)
+
+The same browser suite can use the production Dockerfile and Nginx configuration
+with a disposable database. From PowerShell:
+
+```powershell
+$env:UI_TEST_COMPOSE = '1'
+$env:PATH = "$env:LOCALAPPDATA\Programs\DockerDesktop\resources\bin;" + $env:PATH
+try { npm.cmd run test:browser } finally { Remove-Item Env:UI_TEST_COMPOSE }
+```
+
+Leave `UI_BASE_URL` unset. Setup starts the separate `takeaway-browser-tests`
+project, applies migrations, builds the app, and exposes Nginx on localhost 8877.
+Fixtures use only the test database on 55432. Teardown removes all test containers;
+the normal deployment on 8080 is untouched. Default browser tests still use local
+Uvicorn. If interrupted, clean up with:
+
+```powershell
+docker --context desktop-linux compose -p takeaway-browser-tests -f compose.browser-tests.yaml --profile full down
+```
+
+Review coverage: customer registration/login, menu/cart/checkout and history;
+staff menu editing and order progression; admin restaurant and staff creation,
+assignment, and menu access without assignment. The suite retains its controlled
+error/navigation responses; business journeys use real API requests and test DB
+records. Chromium is the only browser covered; this is not a mobile, accessibility,
+load or security audit.
+
+Current limitations:
+
+- Login, cart and unresolved checkout use tab-scoped sessionStorage; closing the
+  tab loses that state. Tokens have no refresh/revocation flow in this UI.
+- Updates are manual. Only restaurant-order pagination is URL-based; other lists
+  reset pagination on browser reload. Full last pages can lead to an empty page.
+- Staff assignment uses IDs because listing endpoints are absent. No staff
+  editing, password reset or unassignment UI is provided.
+- Only checkout has idempotent retries. Other uncertain writes require checking
+  the result before retrying. No payments or cancellation actions are added.
+- Restaurant IDs and raw server timestamps are displayed. Unsaved forms are
+  discarded on navigation. Styling remains minimal; deployment uses local HTTP.

@@ -243,7 +243,7 @@ Verification: 41 JS unit tests, all 14 browser tests (36.8s), 2 UI-serving tests
 passed. Real DB journey checks validation, creation, menu/reload persistence,
 listing and staff UI denial. Existing dependency/color warnings remain.
 Compose rebuilt healthy. Stop for F11 review.
-F12 accepted; user requested commit and F13. Admin Manage staff page creates
+F12 accepted and committed as 70373ff; user requested F13. Admin Manage staff page creates
 staff with name/email/initial password and assigns staff to restaurants using IDs.
 Creation prefills staff ID; password clears on submission and navigation, never
 stored in browser storage. Validation, busy guard, duplicate/missing/non-staff
@@ -256,6 +256,19 @@ then logs in as that staff member and successfully edits the assigned menu.
 Verification: 45 JS unit tests, all 15 browser tests (38.9s) and 2 UI-serving tests
 passed. Compose rebuilt healthy. Existing dependency/color warnings remain.
 Stop for F12 review; no F12 commit requested yet.
+F13 accepted; user requested commit and a simple CSS improvement milestone. Added optional UI_TEST_COMPOSE=1
+browser mode using the production Dockerfile/Nginx config and the existing
+disposable DB. Test app/nginx services use profile full, distinct image tag,
+localhost 8877; teardown removes the complete test project. UI_BASE_URL cannot be
+combined with this mode. Default local Uvicorn mode remains available. No product
+features or backend behavior changed. README records setup/cleanup, review scope
+and limitations, and corrects stale checkout/history notes.
+Verification: all 15 browser tests passed through isolated Nginx (49.9s); two
+default-Uvicorn navigation tests also passed (9.2s). Test containers were removed
+and the normal app/nginx/db remained healthy. git diff --check passed. Unit and
+backend suites were not repeated for this test-tooling/documentation milestone.
+F13 completes the planned UI epic subject to user review; no next milestone is
+automatically authorized. Stop for review; F13 remains uncommitted.
 F1.1 extracts routeFromHash/viewForRoute into app/ui/routes.js, imported by the
 browser and Node tests. app.js now loads as a browser module. Added package.json
 with type=module and test:unit; no npm dependencies or application build step.

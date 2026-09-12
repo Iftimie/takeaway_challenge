@@ -2,7 +2,9 @@ import { defineConfig } from '@playwright/test';
 import { python } from './tests/ui-browser/database.js';
 
 const externalURL = process.env.UI_BASE_URL;
-const localURL = 'http://127.0.0.1:8766';
+const composeMode = process.env.UI_TEST_COMPOSE === '1';
+if (composeMode && externalURL) throw new Error('Use UI_TEST_COMPOSE or UI_BASE_URL, not both.');
+const localURL = composeMode ? 'http://127.0.0.1:8877' : 'http://127.0.0.1:8766';
 
 export default defineConfig({
   testDir: './tests/ui-browser',
@@ -17,7 +19,7 @@ export default defineConfig({
     video: 'on'
   },
   // An explicit URL uses an existing deployment; otherwise own a temporary server.
-  webServer: externalURL ? undefined : {
+  webServer: externalURL || composeMode ? undefined : {
     command: `"${python}" -m uvicorn app.main:app --host 127.0.0.1 --port 8766 --no-access-log`,
     env: {
       POSTGRES_DB: 'takeaway_browser_test', POSTGRES_USER: 'browser_test',

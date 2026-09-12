@@ -81,11 +81,13 @@ if __name__ == '__main__':
         try:
             compose('up', '-d', '--wait')
             subprocess.run([sys.executable, '-m', 'alembic', 'upgrade', 'head'], cwd=ROOT, check=True)
+            if os.environ.get('UI_TEST_COMPOSE') == '1':
+                compose('--profile', 'full', 'up', '-d', '--build', '--wait')
         except BaseException:
-            compose('down')
+            compose('--profile', 'full', 'down')
             raise
     elif action == 'stop':
-        compose('down')
+        compose('--profile', 'full', 'down')
     else:
         fixtures(action.startswith('seed'), orders=action in ('seed-orders', 'seed-staff-orders'),
                  staff=action in ('seed-menu', 'seed-staff-orders'))
