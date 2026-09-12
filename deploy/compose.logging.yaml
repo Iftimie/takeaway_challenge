@@ -1,0 +1,14 @@
+# Enabled only by the deployed server after credentials are installed.
+services:
+  app:
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: eu-north-1
+        awslogs-group: /takeaway/${DEPLOY_ENVIRONMENT:?Set DEPLOY_ENVIRONMENT}/app
+        awslogs-stream: app
+        awslogs-create-group: "false"
+        mode: non-blocking
+        max-buffer-size: 1m
+        cache-max-size: 10m
+        cache-max-file: "2"

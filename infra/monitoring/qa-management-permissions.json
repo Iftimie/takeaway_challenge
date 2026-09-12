@@ -1,0 +1,61 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DescribeGroups",
+      "Effect": "Allow",
+      "Action": "logs:DescribeLogGroups",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "eu-north-1"
+        }
+      }
+    },
+    {
+      "Sid": "ManageOwnAppLogGroup",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:DeleteLogGroup",
+        "logs:PutRetentionPolicy",
+        "logs:DeleteRetentionPolicy",
+        "logs:DescribeMetricFilters",
+        "logs:PutMetricFilter",
+        "logs:DeleteMetricFilter",
+        "logs:ListTagsForResource",
+        "logs:TagResource",
+        "logs:UntagResource"
+      ],
+      "Resource": [
+        "arn:aws:logs:eu-north-1:455958489157:log-group:/takeaway/qa/app",
+        "arn:aws:logs:eu-north-1:455958489157:log-group:/takeaway/qa/app:*"
+      ]
+    },
+    {
+      "Sid": "ListMonitoringState",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::takeaway-tfstate-455958489157-eu-north-1"
+    },
+    {
+      "Sid": "OwnMonitoringState",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::takeaway-tfstate-455958489157-eu-north-1/monitoring/qa/terraform.tfstate"
+    },
+    {
+      "Sid": "OwnMonitoringLock",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::takeaway-tfstate-455958489157-eu-north-1/monitoring/qa/terraform.tfstate.tflock"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 """Deploy a published digest over verified SSH, then check the environment over public HTTP."""
 import ipaddress
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -22,8 +23,20 @@ def deploy(environment, ip, image, key, known_hosts):
                '-o', f'UserKnownHostsFile={known_hosts}', '-o', 'ConnectTimeout=15']
     target = f'deploy@{ip}'
     files = [str(root / 'deploy' / name) for name in
-             ('compose.yaml', 'nginx.conf', 'deploy.sh')]
+             ('compose.yaml', 'compose.logging.yaml', 'nginx.conf', 'deploy.sh')]
     subprocess.run(['scp', *options, *files, f'{target}:/opt/takeaway/'], check=True)
+    if os.environ.get('ENABLE_CLOUDWATCH') == '1':
+        access_key = os.environ['AWS_ACCESS_KEY_ID']
+        secret_key = os.environ['AWS_SECRET_ACCESS_KEY']
+        if not access_key or not secret_key or any(c in access_key + secret_key for c in '\r\n'):
+            raise ValueError('Invalid CloudWatch credentials')
+        credentials = f'[default]\naws_access_key_id={access_key}\naws_secret_access_key={secret_key}\n'
+        # Docker reads its root credentials file. Send values over SSH stdin only.
+        command = ("docker run --rm -i -v /root/.aws:/aws alpine:3.23 "
+                   "sh -c 'umask 077; cat > /aws/credentials' "
+                   "&& touch /opt/takeaway/.cloudwatch-enabled")
+        subprocess.run(['ssh', *options, target, command], input=credentials,
+                       text=True, check=True)
     subprocess.run(['ssh', *options, target,
                     f'cd /opt/takeaway && bash deploy.sh {image} {environment}'], check=True)
     for path in ('/health', '/ui/'):

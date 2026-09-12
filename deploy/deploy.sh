@@ -21,6 +21,10 @@ if [ ! -f .env ]; then
 fi
 export APP_IMAGE="$image"
 compose=(docker compose --project-name "takeaway-$environment" --env-file .env -f compose.yaml)
+if [ -f .cloudwatch-enabled ]; then
+  export DEPLOY_ENVIRONMENT="$environment"
+  compose+=(-f compose.logging.yaml)
+fi
 "${compose[@]}" pull
 "${compose[@]}" up -d --wait db
 # Always run migrations, including when Compose could reuse an exited container.

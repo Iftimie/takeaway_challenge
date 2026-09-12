@@ -70,7 +70,7 @@ tags where supported. Names below are proposals, not existing resources.
 | Shared delivery | Public GHCR package, GitHub QA/prod environments and dedicated infrastructure IAM users | Package `ghcr.io/iftimie/takeaway_challenge`; IAM users/keys configured manually and included in final cleanup |
 | QA | Lightsail instance, firewall rules, SSH public key and any explicitly allocated IP | `takeaway-qa`; `qa/terraform.tfstate` |
 | Prod | Equivalent independent resources | `takeaway-prod`; `prod/terraform.tfstate` |
-| Monitoring | Log groups, metric definitions/filters as needed, one dashboard, per-environment alarms, SNS email notifications | Logs `/takeaway/qa/app`, `/takeaway/prod/app`; dashboard `takeaway`; `monitoring/terraform.tfstate` |
+| Monitoring | Log groups, metric definitions/filters as needed, one dashboard, per-environment alarms, SNS email notifications | Logs `/takeaway/qa/app`, `/takeaway/prod/app`; dashboard `takeaway`; `monitoring/qa/terraform.tfstate`, `monitoring/prod/terraform.tfstate` |
 
 Do not create snapshots, extra disks or static IPs unless a later milestone
 demonstrates a need. Record any addition in the inventory and cleanup procedure.
