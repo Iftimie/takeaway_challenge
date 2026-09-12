@@ -9,6 +9,25 @@ from scripts import deploy
 IMAGE = 'ghcr.io/iftimie/takeaway_challenge@sha256:' + 'a' * 64
 
 
+def test_cloudwatch_credentials_use_stdin_and_not_command_arguments(monkeypatch):
+    monkeypatch.setenv('ENABLE_CLOUDWATCH', '1')
+    monkeypatch.setenv('AWS_ACCESS_KEY_ID', 'test-access-key')
+    monkeypatch.setenv('AWS_SECRET_ACCESS_KEY', 'test-secret-key')
+    run = Mock()
+    monkeypatch.setattr(deploy.subprocess, 'run', run)
+    health = io.BytesIO(b'{"status":"ok"}')
+    health.status = 200
+    ui = io.BytesIO(b'<html>Takeaway</html>')
+    ui.status = 200
+    monkeypatch.setattr(deploy.urllib.request, 'urlopen', Mock(side_effect=[health, ui]))
+    deploy.deploy('qa', '127.0.0.1', IMAGE, 'key', 'known')
+    credential_call = run.call_args_list[1]
+    assert 'aws_secret_access_key=test-secret-key' in credential_call.kwargs['input']
+    for call in run.call_args_list:
+        assert 'test-secret-key' not in ' '.join(call.args[0])
+        assert 'test-access-key' not in ' '.join(call.args[0])
+
+
 @pytest.mark.parametrize('environment', ['qa', 'prod'])
 def test_deployment_uses_selected_environment_and_exact_digest(monkeypatch, environment):
     run = Mock()

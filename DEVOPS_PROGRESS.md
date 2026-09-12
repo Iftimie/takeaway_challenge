@@ -6,7 +6,11 @@
   HTTP. All D9 code was reverted; QA renewal cron and certificate/challenge
   volumes removed, HTTP health verified. No HTTPS Terraform changes were applied.
   D10 accepted by user after reporting the run passed and QA still works.
-  D11 implemented, awaiting PR and first approved Actions production deployment.
+  D11 accepted by user. D12 inspection started; user approved reuse of existing QA/prod credentials for publishing logs.
+  Narrow publishing policies attached; D12 code prepared and locally tested.
+  Exact monitoring-management policies approved, attached and verified.
+  User authorized D12 commit/push/PR on codex/d12-cloudwatch.
+  Live Actions log/metric verification remains pending.
 - Current design: [DEVOPS_DESIGN.md](DEVOPS_DESIGN.md). Region: `eu-north-1`.
   Repository: https://github.com/Iftimie/takeaway_challenge.
   D2 committed/pushed in 74bf7dc; user confirmed CI passed and waived the deliberate
@@ -83,8 +87,8 @@ of D1 and does not authorize creating AWS resources.
 | D8 | Deploy QA Compose stack, migrations, secrets and explicit sample-data setup. | Supply QA secrets/admin credentials securely. | QA works; app redeploy preserves DB; seeding is separate. | Accepted by user; QA manually verified |
 | D9 | IP-certificate issuance/renewal and HTTPS configuration. | Certificate contact email if needed. | Trusted QA HTTPS and verified renewal procedure. | Skipped at user request; attempted setup fully reverted |
 | D10 | Automatic QA deployment after successful CI, smoke checks and deployment serialization. | Merge/push approved change. | Tested image deployed to QA; clear failure/success result. | Accepted by user; run passed and QA manually verified |
-| D11 | Separate prod instance/database/secrets; promote QA image after approval. | Set prod secrets; approve first deployment. | Isolated prod, identical approved digest, HTTP/smoke checks pass. | Implemented; Actions verification pending |
-| D12 | Bounded CloudWatch logs and agreed metrics labelled by environment. | Review metric set and retention. | QA/prod activity distinguishable; errors searchable by request ID. | Not started |
+| D11 | Separate prod instance/database/secrets; promote QA image after approval. | Set prod secrets; approve first deployment. | Isolated prod, identical approved digest, HTTP/smoke checks pass. | Accepted by user; production run and verification confirmed |
+| D12 | Bounded CloudWatch logs and agreed metrics labelled by environment. | Review metric set and retention. | QA/prod activity distinguishable; errors searchable by request ID. | Implemented locally; management permissions and live verification pending |
 | D13 | Single Terraform-managed dashboard for QA and prod. | Review usefulness during a demo. | Traffic/errors/latency/resources clearly visible for both. | Not started |
 | D14 | Environment-specific alarms and controlled failure/recovery checks. | Supply email and confirm AWS subscription. | Understandable failure notification and recovery verified. | Not started |
 | D15 | Ordered complete teardown and recreation rehearsal, including bootstrap/state cleanup. | Authorize destructive rehearsal; confirm disposable data. | No remaining created billable resources; successful recreation. | Not started |
@@ -106,6 +110,39 @@ of D1 and does not authorize creating AWS resources.
 - Backend dependency ranges are not fully locked; review reproducibility in CI.
 
 ## Latest verification
+
+- User explicitly approved both monitoring-management JSON policies. Attached
+  each as inline TakeawayMonitoring to its existing QA/prod user; AWS readback
+  exactly matched both files. No infrastructure apply, deployment or push performed.
+
+- D12 code: separate per-environment monitoring state, 3-day log groups and three
+  filters excluding health probes. Actions plans/applies monitoring, then transfers
+  reused credentials via SSH stdin to Docker root credentials and enables bounded
+  non-blocking awslogs on app only. Application redaction unchanged.
+- Nine deployment tests, two Terraform mock tests, config validation, Compose
+  override check, actionlint and shell syntax passed. Offline initialization reused
+  provider binaries in an isolated data directory; an initial attempt reused an old
+  backend and failed with invalid default credentials, without any apply.
+- Management policy drafts are in infra/monitoring/{qa,prod}-management-permissions.json.
+  Their exact deletion/state scopes require approval after the prior auto-review
+  rejection. No new IAM attachment, AWS resource apply, deployment, commit or push
+  during this implementation turn. Live log/metric verification remains pending.
+
+- D12: user approved reuse of QA/prod credentials. Attached inline TakeawayAppLogs
+  policies to existing github-actions-qa/prod users, allowing only CreateLogStream
+  and PutLogEvents on their respective /takeaway/{environment}/app log streams.
+  Readback matched the local policy JSON files exactly. CSV credentials were not
+  opened or copied; authenticated local takeaway profile sufficed for IAM changes.
+- Auto-review rejected the initial broader lifecycle policy (including deletion).
+  Safer publishing-only policies were approved and attached. Terraform management
+  permissions, log-group creation, metric filters and runtime configuration are
+  still outstanding. No deployment, log group creation, commit or push occurred.
+
+- User accepted D11 and requested D12. Existing request logs already contain
+  request_id, status and duration_ms with schema-based payload redaction. Proposed
+  D12 scope: 3-day app log groups per environment, request count, 5xx count and
+  latency metrics from logs. Dashboard/alarms remain D13/D14. Runtime CloudWatch
+  publishing authentication remains undecided; no resources or permissions changed.
 
 - D11: generalized the existing helper to qa/prod, retaining separate SSH aliases
   and Compose projects. Prod job runs after QA success and the existing approval,

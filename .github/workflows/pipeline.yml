@@ -62,7 +62,7 @@ jobs:
           else
             echo 'release=false' >> "$GITHUB_OUTPUT"
           fi
-          changed=$(gh api --paginate "repos/$REPOSITORY/pulls/$PR_NUMBER/files" | jq -s 'add | any(.[]; [.filename, (.previous_filename // "")] | any(.[]; startswith("infra/server/") or startswith(".github/")))')
+          changed=$(gh api --paginate "repos/$REPOSITORY/pulls/$PR_NUMBER/files" | jq -s 'add | any(.[]; [.filename, (.previous_filename // "")] | any(.[]; startswith("infra/server/") or startswith("infra/monitoring/") or startswith(".github/")))')
           echo "infrastructure=$changed" >> "$GITHUB_OUTPUT"
 
   terraform-validation:
@@ -84,6 +84,11 @@ jobs:
           terraform init -backend=false -lockfile=readonly -no-color
           terraform fmt -check -recursive
           bash -n bootstrap.sh.tftpl
+          terraform validate -no-color
+          terraform test -no-color
+          cd ../monitoring
+          terraform init -backend=false -lockfile=readonly -no-color
+          terraform fmt -check -recursive
           terraform validate -no-color
           terraform test -no-color
 
@@ -120,6 +125,10 @@ jobs:
           echo '```text' >> "$GITHUB_STEP_SUMMARY"
           cat qa-plan.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: ./.github/actions/monitoring
+        with:
+          environment: qa
 
   qa-apply:
     needs: [tests, changes, terraform-validation]
@@ -168,8 +177,13 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+      - uses: ./.github/actions/monitoring
+        with:
+          environment: qa
+          apply: 'true'
       - name: Deploy published digest and smoke test QA
         env:
+          ENABLE_CLOUDWATCH: '1'
           IMAGE: ${{ needs.tests.outputs.image }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_KNOWN_HOSTS: ${{ vars.SSH_KNOWN_HOSTS }}
@@ -228,8 +242,13 @@ jobs:
           terraform apply -lock-timeout=60s -no-color prod.tfplan
           ip=$(terraform output -raw public_ip)
           printf 'Production server: `%s` (cloud-init and SSH verification still required).\n' "$ip" >> "$GITHUB_STEP_SUMMARY"
+      - uses: ./.github/actions/monitoring
+        with:
+          environment: prod
+          apply: 'true'
       - name: Deploy published digest and smoke test production
         env:
+          ENABLE_CLOUDWATCH: '1'
           IMAGE: ${{ needs.tests.outputs.image }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_KNOWN_HOSTS: ${{ vars.SSH_KNOWN_HOSTS }}

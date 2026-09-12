@@ -1,0 +1,30 @@
+name: Plan or apply environment monitoring
+description: Separate monitoring state and three-day application logs.
+inputs:
+  environment:
+    required: true
+    description: qa or prod
+  apply:
+    default: 'false'
+    description: Apply the reviewed configuration after merge
+runs:
+  using: composite
+  steps:
+    - uses: hashicorp/setup-terraform@v4
+      with:
+        terraform_version: '1.16.2'
+        terraform_wrapper: false
+    - shell: bash
+      working-directory: infra/monitoring
+      env:
+        TARGET_ENVIRONMENT: ${{ inputs.environment }}
+        TF_VAR_environment: ${{ inputs.environment }}
+        APPLY: ${{ inputs.apply }}
+      run: |
+        set -euo pipefail
+        case "$TARGET_ENVIRONMENT" in qa|prod) ;; *) exit 1 ;; esac
+        terraform init -backend-config="$TARGET_ENVIRONMENT.s3.tfbackend" -lockfile=readonly -no-color
+        terraform plan -lock-timeout=60s -no-color -out=monitoring.tfplan
+        if [ "$APPLY" = true ]; then
+          terraform apply -lock-timeout=60s -no-color monitoring.tfplan
+        fi
