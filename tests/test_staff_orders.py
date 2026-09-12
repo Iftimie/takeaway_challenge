@@ -10,6 +10,16 @@ from app.models import MenuItem, Order, OrderItem, Restaurant, StaffAssignment, 
 pytestmark = pytest.mark.integration
 
 
+def test_admin_lists_orders_without_assignment(kitchen):
+    client, connection, users, restaurants, headers, add_order = kitchen
+    connection.execute(update(User).where(User.id == users[0]).values(role="admin"))
+    connection.execute(delete(StaffAssignment).where(StaffAssignment.staff_id == users[0]))
+    expected = add_order(restaurant=1)
+    response = client.get(f"/restaurants/{restaurants[1]}/orders", headers=headers)
+    assert response.status_code == 200
+    assert [row["id"] for row in response.json()] == [expected]
+
+
 @pytest.fixture
 def kitchen(registration, monkeypatch):
     client, connection = registration
@@ -71,7 +81,7 @@ def test_pagination_and_empty_pages(kitchen):
 
 
 @pytest.mark.parametrize("problem,status", [("anonymous", 401), ("invalid", 401), ("customer", 403),
-    ("admin", 403), ("removed", 403), ("other_restaurant", 403), ("missing", 404)])
+    ("removed", 403), ("other_restaurant", 403), ("missing", 404)])
 def test_access_restrictions(kitchen, problem, status):
     client, connection, users, restaurants, headers, add_order = kitchen
     add_order()
@@ -80,7 +90,7 @@ def test_access_restrictions(kitchen, problem, status):
         headers = {}
     elif problem == "invalid":
         headers = {"Authorization": "Bearer invalid"}
-    elif problem in ("customer", "admin"):
+    elif problem == "customer":
         connection.execute(update(User).where(User.id == users[0]).values(role=problem))
     elif problem == "removed":
         connection.execute(delete(StaffAssignment).where(StaffAssignment.staff_id == users[0]))

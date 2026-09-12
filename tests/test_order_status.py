@@ -11,6 +11,17 @@ pytestmark = pytest.mark.integration
 STATUSES = ["pending", "accepted", "out_for_delivery", "delivered"]
 
 
+def test_admin_updates_without_assignment_but_obeys_transitions(status_order):
+    client, connection, users, restaurant_id, order_id, headers = status_order
+    connection.execute(update(User).where(User.id == users[0]).values(role="admin"))
+    connection.execute(delete(StaffAssignment).where(StaffAssignment.staff_id == users[0]))
+    url = f"/restaurants/{restaurant_id}/orders/{order_id}/status"
+    assert client.patch(url, headers=headers, json={"status": "delivered"}).status_code == 409
+    assert connection.scalar(select(Order.status).where(Order.id == order_id)) == "pending"
+    assert client.patch(url, headers=headers, json={"status": "accepted"}).status_code == 200
+    assert connection.scalar(select(Order.status).where(Order.id == order_id)) == "accepted"
+
+
 @pytest.fixture
 def status_order(registration, monkeypatch):
     client, connection = registration
@@ -53,7 +64,7 @@ def test_invalid_status_request(status_order, data):
 
 
 @pytest.mark.parametrize("problem,status", [("anonymous", 401), ("invalid", 401), ("customer", 403),
-    ("admin", 403), ("removed", 403), ("other_restaurant", 403), ("mismatched", 404), ("missing", 404)])
+    ("removed", 403), ("other_restaurant", 403), ("mismatched", 404), ("missing", 404)])
 def test_status_access_restrictions(status_order, problem, status):
     client, connection, users, restaurant_id, order_id, headers = status_order
     original_id = order_id
@@ -61,7 +72,7 @@ def test_status_access_restrictions(status_order, problem, status):
         headers = {}
     elif problem == "invalid":
         headers = {"Authorization": "Bearer invalid"}
-    elif problem in ("customer", "admin"):
+    elif problem == "customer":
         connection.execute(update(User).where(User.id == users[0]).values(role=problem))
     elif problem == "removed":
         connection.execute(delete(StaffAssignment).where(StaffAssignment.staff_id == users[0]))

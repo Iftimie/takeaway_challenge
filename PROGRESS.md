@@ -100,10 +100,13 @@ menu and missing restaurant. No cart, authentication or backend changes.
 Verification: 9 unit tests, 6 browser tests (14.1s) and 2 UI-serving tests passed;
 existing color/dependency warnings remain. Compose rebuilt healthy for review.
 Commit F3. Browser test titles must use dashes, as requested by the user.
-Manual app/auth/dependencies.py edit permits admins through restaurant assignment
-checks; preserved separately from F3. Authorization tests and other service-level
-checks have not yet been reconciled with that permission change.
-Next: F4 login/logout. Token persistence is still an unresolved design decision.
+Admin permission change accepted: admins bypass restaurant assignment checks for
+menu creation/updates and restaurant order listing/status updates. Tests now
+verify all four operations without assignments, missing restaurant 404 and status
+transition rules. Existing customer/staff restrictions remain. 403 backend tests
+passed with 2 existing warnings; separate commit requested by the user.
+F3 committed as e9c0060. Next: F4 login/logout. User accepted in-memory login:
+browser refresh requires logging in again. No persistent token storage.
 Added requested trace shortcuts: npm run test:trace retains all test traces;
 npm run trace lists current trace.zip archives and opens the selected number.
 No additional dependencies; Enter cancels and missing traces show guidance.
@@ -195,8 +198,9 @@ Core scope:
 - Use PostgreSQL `NUMERIC` and Python `Decimal` for money and server-calculated
   totals. User selected EUR, positive prices with at most two decimal places;
   API rejects excess precision rather than rounding. Menu prices use NUMERIC(10,2).
-- Only assigned staff perform restaurant operations; admins retain onboarding
-  permissions and cannot create menu items.
+- Assigned staff and admins perform restaurant operations. Admins bypass staff
+  assignments but still obey resource existence, validation and transition rules.
+  Customer-only operations remain customer-only.
 - Preserve item-name and unit-price snapshots in orders. Initially manage menu
   changes through edits and availability; no menu deletion endpoint is planned.
 - Create files only when their milestones need them.

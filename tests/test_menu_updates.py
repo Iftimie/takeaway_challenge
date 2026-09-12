@@ -10,6 +10,16 @@ from app.models import MenuItem, Restaurant, StaffAssignment, User
 pytestmark = pytest.mark.integration
 
 
+def test_admin_updates_without_assignment(menu):
+    client, connection, user_id, restaurant_id, item_id, headers = menu
+    connection.execute(update(User).where(User.id == user_id).values(role="admin"))
+    connection.execute(delete(StaffAssignment).where(StaffAssignment.staff_id == user_id))
+    response = client.patch(f"/restaurants/{restaurant_id}/menu-items/{item_id}",
+                            headers=headers, json={"available": False})
+    assert response.status_code == 200
+    assert connection.scalar(select(MenuItem.available).where(MenuItem.id == item_id)) is False
+
+
 @pytest.fixture
 def menu(registration, monkeypatch):
     client, connection = registration
@@ -65,7 +75,7 @@ def test_invalid_updates_leave_item_unchanged(menu, changes):
 
 
 @pytest.mark.parametrize("problem,status", [
-    ("anonymous", 401), ("invalid_token", 401), ("customer", 403), ("admin", 403),
+    ("anonymous", 401), ("invalid_token", 401), ("customer", 403),
     ("removed_assignment", 403), ("other_restaurant", 403),
     ("mismatched_item", 404), ("missing_item", 404), ("missing_restaurant", 404),
 ])
@@ -77,7 +87,7 @@ def test_access_and_missing_records(menu, problem, status):
         headers = {}
     elif problem == "invalid_token":
         headers = {"Authorization": "Bearer invalid"}
-    elif problem in ("customer", "admin"):
+    elif problem == "customer":
         connection.execute(update(User).where(User.id == user_id).values(role=problem))
     elif problem == "removed_assignment":
         connection.execute(delete(StaffAssignment).where(StaffAssignment.staff_id == user_id))

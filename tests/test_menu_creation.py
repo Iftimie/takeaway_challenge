@@ -53,8 +53,20 @@ def test_availability_defaults_to_true(menu):
     assert response.json()["available"] is True
 
 
+def test_admin_creates_without_assignment_and_missing_restaurant_is_404(menu):
+    client, connection, user_id, restaurant_id, headers = menu
+    connection.execute(update(User).where(User.id == user_id).values(role="admin"))
+    connection.execute(delete(StaffAssignment).where(StaffAssignment.staff_id == user_id))
+    data = {"name": "Admin soup", "price": "5.00"}
+    response = client.post(f"/restaurants/{restaurant_id}/menu-items", headers=headers, json=data)
+    assert response.status_code == 201
+    assert connection.scalar(select(MenuItem.name).where(MenuItem.id == response.json()["id"])) == "Admin soup"
+    missing = connection.scalar(select(func.max(Restaurant.id))) + 1
+    assert client.post(f"/restaurants/{missing}/menu-items", headers=headers, json=data).status_code == 404
+
+
 @pytest.mark.parametrize("problem,status", [
-    ("anonymous", 401), ("bad_token", 401), ("customer", 403), ("admin", 403),
+    ("anonymous", 401), ("bad_token", 401), ("customer", 403),
     ("removed_assignment", 403), ("other_restaurant", 403), ("missing_restaurant", 404),
 ])
 def test_access_restrictions_create_no_item(menu, problem, status):
@@ -63,7 +75,7 @@ def test_access_restrictions_create_no_item(menu, problem, status):
         headers = {}
     elif problem == "bad_token":
         headers = {"Authorization": "Bearer invalid"}
-    elif problem in ("customer", "admin"):
+    elif problem == "customer":
         # The existing token and assignment must not override the current role.
         connection.execute(update(User).where(User.id == user_id).values(role=problem))
     elif problem == "removed_assignment":

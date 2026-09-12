@@ -44,9 +44,14 @@ def require_assigned_staff(
     user: Annotated[User, Depends(get_current_user)],
     session: Annotated[Session, Depends(get_session)],
 ) -> None:
-    if user.role != "staff":
-        raise HTTPException(403, "Assigned staff access required")
+    if user.role not in {"staff", "admin"}:
+        raise HTTPException(403, "Assigned staff or admin access required")
+
     if session.get(Restaurant, restaurant_id) is None:
         raise HTTPException(404, "Restaurant not found")
+
+    if user.role == "admin":
+        return
+
     if session.get(StaffAssignment, (user.id, restaurant_id)) is None:
         raise HTTPException(403, "Assigned staff access required")

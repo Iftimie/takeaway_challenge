@@ -488,7 +488,7 @@ Trailing zeros do not change the price's precision (for example, 6.500 is 6.50).
 Names must contain 1-200 characters after trimming. Invalid prices, names, IDs,
 or extra fields return 422. The restaurant ID comes from the URL; currency is
 fixed by the platform. Missing/invalid authentication returns 401. Customers,
-admins, and staff without an assignment receive 403. A staff request for a
+and staff without an assignment receive 403. Admins bypass assignment checks. A staff/admin request for a
 missing restaurant returns 404. Role and assignment are checked on each request.
 
 ```powershell
@@ -542,7 +542,7 @@ their values; an empty object, explicit null, or extra field returns 422.
 An invalid field rejects the whole request without applying other changes.
 
 Both creation and updates use the same current-role and assignment check.
-Customers/admins/unassigned staff receive 403; missing/invalid authentication
+Customers/unassigned staff receive 403; admins bypass assignments. Missing/invalid authentication
 returns 401. A missing item or an item belonging to another restaurant returns
 404 after authorization. Invalid IDs return 422. The restaurant cannot be
 changed through this endpoint. Updated items appear in public menu browsing.
@@ -689,7 +689,7 @@ EUR total, creation time, and purchased item snapshots. Internal idempotency key
 and fingerprints are excluded. Item lines are fetched in one batch for the page.
 
 The current staff role and assignment are checked using the same dependency as
-menu writes. Missing/invalid authentication returns 401; customers, admins, and
+menu writes; admins bypass assignment checks. Missing/invalid authentication returns 401; customers and
 staff without an assignment receive 403. A staff request for a missing restaurant
 returns 404. An existing assigned restaurant with no orders returns `[]`.
 
@@ -726,8 +726,8 @@ a different status returns 409 so the caller can reload. PostgreSQL still takes
 its ordinary row lock when executing UPDATE. A delayed retry for a status the
 order has already passed returns 409, rather than moving it backward.
 
-Only the current assigned staff role is permitted. Missing/invalid authentication
-returns 401; customers/admins/unassigned staff receive 403. Missing or mismatched
+Assigned staff and admins are permitted; admins do not need assignments.
+Missing/invalid authentication returns 401; customers/unassigned staff receive 403. Missing or mismatched
 orders return 404. Unknown statuses, extra fields, and invalid IDs return 422.
 
 ```powershell
