@@ -1166,3 +1166,15 @@ See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
 milestones, and review status. Payload logging is accepted; the recorded
 performance/metrics scope decisions remain. Database backup implementation was
 explicitly skipped; backups remain a production consideration.
+## UI checkout (F7)
+
+Add items to the cart, choose Checkout, and log in as a customer. Return to
+Checkout, enter delivery details and select Place order. Confirmation shows the
+server's order number, status and final prices. Cart prices are estimates.
+
+An uncertain response keeps the request and its idempotency key in this tab's
+sessionStorage, including delivery details. Retry order resends exactly that
+request, including after refresh. Cart editing pauses until it is resolved.
+Signing out retains an unresolved checkout; only its original customer can retry
+it. Closing the tab loses this recovery state. Successful confirmation is shown
+in memory; order history comes in F8. No payment or automatic retry is added.

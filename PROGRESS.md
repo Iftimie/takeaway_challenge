@@ -148,7 +148,7 @@ F5 follow-up verification: 2 UI-serving tests passed (2 existing warnings),
 Docker Compose rebuild completed healthy and git diff --check passed.
 F6 authorized: cart uses sessionStorage to survive refresh, as requested. Backend
 limits are 100 distinct items and quantity 1-100 per item.
-F6 implemented, awaiting review. CartView and /cart route; add available items,
+F6 accepted and committed as 01ddc6d. CartView and /cart route; add available items,
 merge quantities, edit integer quantities 1-100, remove lines and cap distinct
 items at 100. One restaurant per cart, browser confirmation before replacement.
 Cart persists in sessionStorage; invalid stored data falls back to empty. Explicit
@@ -157,12 +157,31 @@ cents, labelled estimates; checkout will recheck server prices/availability.
 No order submission until F7. No backend changes or new dependencies.
 Verification: 20 unit tests and 9 browser tests passed (20.6s). Real seeded cart
 journey covers unavailable items, quantity/total, refresh, replacement cancel/
-confirm and removal persistence. F6 accepted; user requested commit and F7.
+confirm and removal persistence. User requested F7 after accepting F6.
 Two UI-serving tests passed (2 existing warnings); Compose rebuilt healthy and
 git diff --check passed. Browser tests retain the benign color warning.
 Added requested trace shortcuts: npm run test:trace retains all test traces;
 npm run trace lists current trace.zip archives and opens the selected number.
 No additional dependencies; Enter cancels and missing traces show guidance.
+F7 accepted; user requested commit and F8. Checkout route/component uses
+the existing POST /orders API, customer access, profile delivery defaults and
+server confirmation with order number/status/items/final total. Successful orders
+clear the cart. Pending checkout stores the exact payload, customer ID and UUID
+idempotency key in sessionStorage before sending. Network/5xx/401 failures retain
+it across refresh; retries use the same request. Known 403/404/409/422 rejections
+allow correction. Duplicate submissions are blocked. Pending cart editing is
+blocked; logout retains unresolved checkout for its original customer to retry.
+This intentionally qualifies F6's usual clear-cart-on-logout behavior. Delivery
+details remain in tab storage until resolved; closing the tab loses recovery.
+Confirmation itself is in memory; order history belongs to F8. No payment,
+automatic retry, new dependencies or backend API changes.
+Verification: 25 JS unit tests, all 10 browser tests (23.9s) and 2 UI-serving tests
+passed. Checkout/login browser tests passed again after the final logout change
+(2 tests, 13.4s). Real DB test commits an order, drops the response, refreshes and
+retries: HTTP 200 returns the original ID and order listing contains one order.
+Fixture cleanup now deletes order lines/orders before menus/restaurants/users.
+Existing dependency and color warnings remain. Compose rebuilt healthy for
+manual review; git diff --check passed. Stop for F7 review.
 F1.1 extracts routeFromHash/viewForRoute into app/ui/routes.js, imported by the
 browser and Node tests. app.js now loads as a browser module. Added package.json
 with type=module and test:unit; no npm dependencies or application build step.

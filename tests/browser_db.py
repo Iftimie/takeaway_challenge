@@ -16,7 +16,7 @@ os.environ.update({
 from sqlalchemy import delete, text
 from sqlalchemy.orm import Session
 from app.db import get_engine
-from app.models import Restaurant, MenuItem, User
+from app.models import Restaurant, MenuItem, User, Order, OrderItem
 from app.auth.service import password_hasher
 
 
@@ -32,6 +32,8 @@ def fixtures(seed):
         if (session.scalar(text('SELECT current_database()')) != 'takeaway_browser_test'
                 or session.scalar(text('SELECT current_user')) != 'browser_test'):
             raise RuntimeError('Refusing fixture changes outside the browser test database')
+        session.execute(delete(OrderItem))
+        session.execute(delete(Order))
         session.execute(delete(MenuItem))
         session.execute(delete(Restaurant))
         session.execute(delete(User))

@@ -1,4 +1,6 @@
 <script>
+import CheckoutView from './components/CheckoutView.vue';
+import { checkoutState, placeOrder } from './checkout.js';
 import CartView from './components/CartView.vue';
 import { emptyCart, restoreCart, saveCart, addItem, setQuantity, removeItem } from './cart.js';
 import RegisterView from './components/RegisterView.vue';
@@ -13,11 +15,11 @@ import { restaurantState, canGoNext, loadRestaurants } from './restaurants.js';
 import { sessionState, login, logout, restoreSession } from './session.js';
 
 export default {
-  components: { LoginView, RestaurantList, MenuView, RegisterView, CartView },
+  components: { LoginView, RestaurantList, MenuView, RegisterView, CartView, CheckoutView },
   data() {
     return { route: routeFromHash(window.location.hash), restaurants: restaurantState(), pageSize: PAGE_SIZE, menu: menuState(0),
       session: sessionState(window.sessionStorage), email: '', password: '',
-      cart: restoreCart(window.sessionStorage), cartMessage: '' };
+      cart: restoreCart(window.sessionStorage), cartMessage: '', checkout: checkoutState(window.sessionStorage) };
   },
   computed: {
     view() {
@@ -28,7 +30,18 @@ export default {
     hasNextMenuPage() { return canGoNextMenu(this.menu); },
   },
   methods: {
+    cartLocked() {
+      if (!this.checkout.pending && !this.checkout.loading) return false;
+      this.cartMessage = 'Finish the saved checkout before changing your cart.';
+      return true;
+    },
+    async submitOrder(details) {
+      const order = await placeOrder(this.checkout, this.session, this.cart, details, window.sessionStorage);
+      if (order) { this.cart = emptyCart(); saveCart(this.cart, window.sessionStorage); }
+    },
     addToCart(item) {
+      if (this.cartLocked()) return;
+      this.checkout.order = null;
       if (!item.available) return;
       if (this.cart.restaurant && this.cart.restaurant.id !== this.menu.restaurant.id) {
         if (!window.confirm('Replace your cart with items from this restaurant?')) return;
@@ -41,6 +54,7 @@ export default {
       } catch (error) { this.cartMessage = error.message; }
     },
     changeQuantity(id, quantity) {
+      if (this.cartLocked()) return;
       try {
         setQuantity(this.cart, id, quantity);
         saveCart(this.cart, window.sessionStorage);
@@ -48,6 +62,7 @@ export default {
       } catch (error) { this.cartMessage = error.message; }
     },
     removeFromCart(id) {
+      if (this.cartLocked()) return;
       removeItem(this.cart, id);
       saveCart(this.cart, window.sessionStorage);
       this.cartMessage = '';
@@ -58,9 +73,14 @@ export default {
       await login(this.session, this.email, password);
     },
     signOut() {
+      if (this.checkout.loading) return;
+      this.checkout.order = null;
       logout(this.session);
-      this.cart = emptyCart();
-      saveCart(this.cart, window.sessionStorage);
+      // Keep an uncertain request so signing back in can resolve it safely.
+      if (!this.checkout.pending) {
+        this.cart = emptyCart();
+        saveCart(this.cart, window.sessionStorage);
+      }
       this.email = '';
       this.password = '';
       window.location.hash = '/login';
@@ -100,13 +120,15 @@ export default {
         <a href="#/login" :aria-current="route === '/login' ? 'page' : null">{{ session.user ? 'Account' : 'Log in' }}</a>
         <span v-if="session.user">{{ session.user.name }} ({{ session.user.role }})</span>
         <a v-if="!session.user" href="#/register" :aria-current="route === '/register' ? 'page' : null">Register</a>
-        <button v-if="session.user" @click="signOut" :disabled="session.loading">Log out</button>
+        <button v-if="session.user" @click="signOut" :disabled="session.loading || checkout.loading">Log out</button>
       </nav>
     </header>
     <main>
       <h1>{{ view.title }}</h1>
       <p>{{ view.description }}</p>
       <p v-if="cartMessage" role="status">{{ cartMessage }}</p>
+      <p v-if="checkout.pending && route !== '/checkout'"><a href="#/checkout">Return to saved checkout</a></p>
+      <CheckoutView v-if="route === '/checkout'" :checkout="checkout" :session="session" :cart="cart" @submit="submitOrder" />
       <CartView v-if="route === '/cart'" :cart="cart" @quantity="changeQuantity" @remove="removeFromCart" />
       <RegisterView v-if="route === '/register'" />
       <LoginView v-if="route === '/login'" :session="session" v-model:email="email" v-model:password="password" @submit="submitLogin" />

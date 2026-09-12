@@ -23,7 +23,9 @@ export default {
         </li>
       </ul>
       <p>Estimated total: {{ formatMoney(totalCents(cart)) }}</p>
-      <p>Prices and availability will be checked when ordering. Checkout is coming next.</p>
+      <p>Prices and availability will be checked when ordering.</p>
+      <a href="#/checkout">Checkout</a>
+      <br>
       <a :href="`#/restaurants/${cart.restaurant.id}/menu`">Back to menu</a>
     </template>
   </section>
