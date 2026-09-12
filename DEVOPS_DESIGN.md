@@ -23,11 +23,11 @@ No Git remote was configured when D1 was inspected; recording this URL does not 
 
 ## Request and release flow
 
-Browser -> environment public IP over HTTPS -> Nginx -> app -> PostgreSQL.
+Browser -> environment public IP over HTTP -> Nginx -> app -> PostgreSQL.
 SSH is reachable from any IPv4 address, with key authentication and password login
 disabled (user-selected simplification). Web ports are added with deployment. Neither Uvicorn
 nor PostgreSQL needs a public port. The UI and API share an origin.
-Use trusted IP certificates with automated renewal, subject to D9 verification.
+HTTPS was canceled by the user in D9; use public HTTP for this challenge.
 No domain, load balancer, managed database or Kubernetes is planned.
 
 GitHub Actions runs Python, JavaScript and browser tests using a disposable test
@@ -123,8 +123,7 @@ See [AWS metric lifecycle documentation](https://docs.aws.amazon.com/AmazonCloud
 - D7/D12: verify Lightsail/monitoring availability under the current account
   restrictions and settle CloudWatch publishing authentication. Verify the SSH
   server host key before deployment.
-- D9: verify the certificate client, IP issuance and automatic renewal before
-  claiming trusted HTTPS works.
+- D9: skipped at user request; HTTPS is out of scope.
 - D12–D14: choose the small metric set, retention, thresholds and notification email.
 - D16: an older image may not work with a newer database schema; rollback must
   document migration compatibility rather than promise automatic database reversal.
