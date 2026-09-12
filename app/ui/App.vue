@@ -1,4 +1,5 @@
 <script>
+import StaffAdminView from './components/StaffAdminView.vue';
 import RestaurantCreateView from './components/RestaurantCreateView.vue';
 import StaffOrdersView from './components/StaffOrdersView.vue';
 import MenuEditor from './components/MenuEditor.vue';
@@ -19,7 +20,7 @@ import { restaurantState, canGoNext, loadRestaurants } from './restaurants.js';
 import { sessionState, login, logout, restoreSession } from './session.js';
 
 export default {
-  components: { LoginView, RestaurantList, MenuView, RegisterView, CartView, CheckoutView, OrdersView, MenuEditor, StaffOrdersView, RestaurantCreateView },
+  components: { LoginView, RestaurantList, MenuView, RegisterView, CartView, CheckoutView, OrdersView, MenuEditor, StaffOrdersView, RestaurantCreateView, StaffAdminView },
   data() {
     return { route: routeFromHash(window.location.hash), restaurants: restaurantState(), pageSize: PAGE_SIZE, menu: menuState(0),
       session: sessionState(window.sessionStorage), email: '', password: '',
@@ -125,6 +126,7 @@ export default {
       <nav aria-label="Main navigation">
         <a href="#/restaurants" :aria-current="route === '/restaurants' ? 'page' : null">Restaurants</a>
         <a v-if="session.user?.role === 'admin'" href="#/restaurants/new">Create restaurant</a>
+        <a v-if="session.user?.role === 'admin'" href="#/staff">Manage staff</a>
         <a v-if="session.user?.role === 'customer'" href="#/orders">My orders</a>
         <a href="#/cart" :aria-current="route === '/cart' ? 'page' : null">Cart ({{ cart.items.reduce((sum, item) => sum + item.quantity, 0) }})</a>
         <a href="#/login" :aria-current="route === '/login' ? 'page' : null">{{ session.user ? 'Account' : 'Log in' }}</a>
@@ -135,6 +137,7 @@ export default {
     </header>
     <main>
       <h1>{{ view.title }}</h1>
+      <StaffAdminView v-if="route === '/staff'" :key="session.user?.id" :session="session" />
       <RestaurantCreateView v-if="route === '/restaurants/new'" :key="session.user?.id" :session="session" @created="restaurantCreated" />
       <StaffOrdersView v-if="staffRestaurantId" :key="route" :session="session" :restaurant-id="staffRestaurantId" :page="staffPage" />
       <p v-if="menuId && ['staff', 'admin'].includes(session.user?.role)"><a :href="`#/restaurants/${menuId}/orders`">Manage orders</a></p>

@@ -1166,6 +1166,14 @@ See `AGENTS.md` for the working agreement and `PROGRESS.md` for decisions,
 milestones, and review status. Payload logging is accepted; the recorded
 performance/metrics scope decisions remain. Database backup implementation was
 explicitly skipped; backups remain a production consideration.
+## Staff administration (F12)
+
+Admins can open **Manage staff** to create an account with an initial password,
+then assign it to a restaurant. Creation prefills the staff ID; enter a restaurant
+ID from its menu URL. Existing staff IDs can also be entered manually. Passwords
+clear on submission. The API has no staff/assignment listing, unassignment or
+password-reset endpoint. Keep the returned staff ID for future assignments.
+
 ## Restaurant creation (F11)
 
 Admins can use **Create restaurant** in the navigation to add a name and address
