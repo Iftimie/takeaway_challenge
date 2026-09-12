@@ -1,0 +1,46 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListStateBucket",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::takeaway-tfstate-455958489157-eu-north-1"
+    },
+    {
+      "Sid": "ReadEnvironmentState",
+      "Effect": "Allow",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::takeaway-tfstate-455958489157-eu-north-1/qa/terraform.tfstate"
+    },
+    {
+      "Sid": "ManageStateLock",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::takeaway-tfstate-455958489157-eu-north-1/qa/terraform.tfstate.tflock"
+    },
+    {
+      "Sid": "ReadLightsailForPlanning",
+      "Effect": "Allow",
+      "Action": [
+        "lightsail:GetInstance",
+        "lightsail:GetInstanceState",
+        "lightsail:GetInstancePortStates",
+        "lightsail:GetKeyPair",
+        "lightsail:GetOperation",
+        "lightsail:GetOperations",
+        "lightsail:GetOperationsForResource"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "eu-north-1"
+        }
+      }
+    }
+  ]
+}

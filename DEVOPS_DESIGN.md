@@ -47,6 +47,16 @@ ordinary application deployment does not recreate infrastructure. Serialize
 deployments per environment. Run migrations before starting the updated app.
 Sample-data reset remains an explicit destructive action, never a deployment step.
 
+User-selected trigger strategy: opened/updated PRs targeting main run tests and QA
+planning; merged PRs run tests then QA apply, prod planning and approval-protected
+prod apply. Infrastructure steps run only for infra/server or .github changes.
+PR planning uses a dedicated qa-plan identity; prod-plan has its own planning
+identity, with prod approval protecting the write credentials. Fork PRs run tests
+and credential-free Terraform validation only. Production saved plans stay in
+private S3 and are applied unchanged after approval. See infra/server/PIPELINE.md.
+This infrastructure flow is being introduced ahead of app deployment/smoke checks;
+those remain pending, so successful provisioning does not establish app health.
+
 ## Resource ownership and proposed names
 
 Terraform owns AWS resources; Compose owns containers and database volumes;

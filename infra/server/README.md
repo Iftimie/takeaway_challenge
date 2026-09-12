@@ -2,7 +2,8 @@
 
 One Ubuntu 24.04 Lightsail instance, small_3_0 (2 GB RAM, IPv4), in eu-north-1a.
 The catalog lists $12/month; short sessions are billed by runtime subject to AWS
-terms. No static IP, extra disk, snapshot or production instance is included.
+terms. No static IP, extra disk or snapshot is included. The promotion pipeline
+can create a separate production instance after approval, using prod state.
 
 The qa backend stores state separately from bootstrap.
 
@@ -17,7 +18,22 @@ It checks the AWS account, initializes the existing S3 backend, validates/tests
 the configuration and prints a plan. It does not apply changes. Review the
 Plan QA resources step; the first plan should propose three resources. A successful
 plan checks authentication and backend access, but does not prove that AWS allows
-all creation operations. GitHub execution is pending the first push/run.
+all creation operations. The user confirmed the plan workflow passed.
+
+## PR checks and promotion
+
+See [PIPELINE.md](PIPELINE.md) for triggers, required GitHub environments/IAM policies
+and the approval flow. PRs run tests and QA planning; a merged infrastructure PR
+runs tests, fresh QA plan/apply, prod plan and approval-protected prod apply.
+The manual apply draft was replaced by this pipeline before it was pushed.
+
+The job summaries show server addresses. Terraform completion does not mean
+cloud-init has finished. If apply fails, preserve state; partial resources may exist.
+
+After verifying the SSH host identity independently, connect as ubuntu and run
+`sudo cloud-init status --wait`, then verify `docker --version`,
+`docker compose version`, and login as deploy to run `docker info` and
+`test -w /opt/takeaway`. The application and database belong to D8.
 
 ## Local commands
 
@@ -54,5 +70,5 @@ and firewall rules. Verify SSH host identity using an independent AWS console
 channel before trusting the first SSH connection. A real server has not yet been
 created or checked. IPs can change on stop/start without a static IP.
 
-Reuse this configuration for prod only with a separate backend, key and environment
-value in its milestone. Do not switch the QA backend to prod or reuse its state.
+Production uses prod.s3.tfbackend, its own key and environment value. Do not switch
+an initialized QA directory to prod without reinitializing; CI uses fresh directories.

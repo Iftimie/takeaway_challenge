@@ -1,0 +1,208 @@
+name: PR checks and infrastructure promotion
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  contents: read
+
+# Merged releases, including the approval wait, run one at a time.
+# PR checks use a separate group and never cancel a running apply.
+concurrency:
+  group: pipeline-${{ github.event.action == 'closed' && 'main' || github.event.pull_request.number }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-north-1
+  AWS_DEFAULT_REGION: eu-north-1
+  AWS_EC2_METADATA_DISABLED: 'true'
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+
+jobs:
+  tests:
+    if: github.event.action != 'closed' || github.event.pull_request.merged == true
+    uses: ./.github/workflows/tests.yml
+    permissions:
+      contents: read
+      packages: write
+
+  changes:
+    if: github.event.action != 'closed' || github.event.pull_request.merged == true
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      infrastructure: ${{ steps.files.outputs.infrastructure }}
+    steps:
+      - id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          changed=$(gh api --paginate --slurp "repos/$REPOSITORY/pulls/$PR_NUMBER/files" --jq 'add | any(.[]; [.filename, (.previous_filename // "")] | any(.[]; startswith("infra/server/") or startswith(".github/")))')
+          echo "infrastructure=$changed" >> "$GITHUB_OUTPUT"
+
+  terraform-validation:
+    needs: changes
+    if: needs.changes.outputs.infrastructure == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: '1.16.2'
+          terraform_wrapper: false
+      - name: Validate without AWS credentials (including fork PRs)
+        working-directory: infra/server
+        run: |
+          terraform init -backend=false -lockfile=readonly -no-color
+          terraform fmt -check -recursive
+          terraform validate -no-color
+          terraform test -no-color
+
+  qa-plan:
+    needs: [changes, terraform-validation]
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      needs.changes.outputs.infrastructure == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: qa-plan
+    concurrency:
+      group: terraform-qa
+      cancel-in-progress: false
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      TF_VAR_environment: qa
+      TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/terraform-setup
+        with:
+          environment: qa
+      - name: Review QA changes
+        working-directory: infra/server
+        run: |
+          set -o pipefail
+          terraform plan -lock-timeout=60s -no-color | tee qa-plan.txt
+          echo '### QA plan (review only)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          cat qa-plan.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  qa-apply:
+    needs: [tests, changes, terraform-validation]
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true && needs.changes.outputs.infrastructure == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: qa
+    concurrency:
+      group: terraform-qa
+      cancel-in-progress: false
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      TF_VAR_environment: qa
+      TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/terraform-setup
+        with:
+          environment: qa
+      - name: Plan merged code and apply QA
+        working-directory: infra/server
+        run: |
+          terraform plan -lock-timeout=60s -no-color -out=qa.tfplan
+          terraform apply -lock-timeout=60s -no-color qa.tfplan
+          ip=$(terraform output -raw public_ip)
+          printf 'QA server: `%s` (cloud-init and SSH verification still required).\n' "$ip" >> "$GITHUB_STEP_SUMMARY"
+
+  prod-plan:
+    needs: qa-apply
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Separate read-only identity; production approval belongs to the next job.
+    environment: prod-plan
+    outputs:
+      plan_uri: ${{ steps.plan.outputs.plan_uri }}
+      plan_sha256: ${{ steps.plan.outputs.plan_sha256 }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      TF_VAR_environment: prod
+      TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/terraform-setup
+        with:
+          environment: prod
+      - name: Save and display production plan
+        id: plan
+        working-directory: infra/server
+        run: |
+          terraform plan -lock-timeout=60s -no-color -out=prod.tfplan
+          uri="s3://takeaway-tfstate-455958489157-eu-north-1/prod/plans/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.tfplan"
+          aws s3 cp prod.tfplan "$uri" --sse AES256 --only-show-errors
+          echo "plan_uri=$uri" >> "$GITHUB_OUTPUT"
+          echo "plan_sha256=$(sha256sum prod.tfplan | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+          echo '### Review this production plan before approving prod' >> "$GITHUB_STEP_SUMMARY"
+          printf 'Commit: `%s`\n' "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          terraform show -no-color prod.tfplan >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  prod-apply:
+    needs: prod-plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # GitHub's prod required reviewer gates this job after the plan is available.
+    environment: prod
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      TF_VAR_environment: prod
+      TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
+      PLAN_URI: ${{ needs.prod-plan.outputs.plan_uri }}
+      PLAN_SHA256: ${{ needs.prod-plan.outputs.plan_sha256 }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/terraform-setup
+        with:
+          environment: prod
+      - name: Reject an outdated release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          latest=$(gh api "repos/$REPOSITORY/commits/main" --jq .sha)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo 'main changed while approval was pending. Run a fresh merged-code pipeline and review its plan.' >&2
+            exit 1
+          fi
+      - name: Apply the approved saved plan
+        working-directory: infra/server
+        run: |
+          aws s3 cp "$PLAN_URI" prod.tfplan --only-show-errors
+          printf '%s  prod.tfplan\n' "$PLAN_SHA256" | sha256sum --check
+          terraform apply -lock-timeout=60s -no-color prod.tfplan
+          aws s3 rm "$PLAN_URI" --only-show-errors
+          ip=$(terraform output -raw public_ip)
+          printf 'Production server: `%s` (cloud-init and SSH verification still required).\n' "$ip" >> "$GITHUB_STEP_SUMMARY"

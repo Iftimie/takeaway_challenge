@@ -1,7 +1,23 @@
 mock_provider "aws" {}
 
 variables {
+  environment    = "qa"
   ssh_public_key = "ssh-rsa dGVzdA== test-only"
+}
+
+run "prod_has_separate_resource_names" {
+  command = plan
+  variables {
+    environment = "prod"
+  }
+  assert {
+    condition     = aws_lightsail_instance.server.name == "takeaway-prod" && aws_lightsail_key_pair.server.name == "takeaway-prod"
+    error_message = "Production must not reuse QA resource names."
+  }
+  assert {
+    condition     = aws_lightsail_instance.server.tags.Environment == "prod"
+    error_message = "Production must carry its own environment tag for IAM isolation."
+  }
 }
 
 run "qa_key_based_ssh" {

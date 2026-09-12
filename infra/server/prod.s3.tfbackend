@@ -1,0 +1,6 @@
+bucket              = "takeaway-tfstate-455958489157-eu-north-1"
+key                 = "prod/terraform.tfstate"
+region              = "eu-north-1"
+allowed_account_ids = ["455958489157"]
+encrypt             = true
+use_lockfile        = true
