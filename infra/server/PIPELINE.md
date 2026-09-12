@@ -7,7 +7,7 @@ Terraform does not use the SSH_PRIVATE_KEY secrets; server login/deployment will
 | Event | Pipeline |
 |---|---|
 | PR opened, reopened or updated against main | Python/JS/browser tests; QA Terraform plan |
-| PR merged into main | Tests and image publishing; fresh QA plan/apply when needed; QA app deployment/smoke checks; production approval; fresh prod plan/apply |
+| PR merged into main | Tests and image publishing; fresh QA plan/apply when needed; QA app deployment/smoke checks; production approval; fresh prod plan/apply when needed, then prod deployment/smoke checks |
 | PR closed without merging or push without a PR | No automatic pipeline |
 
 Post-merge execution uses push on main, not the pull_request closed event, so
@@ -51,7 +51,7 @@ QA application deployment runs for every verified merged PR after publishing,
 including application-only changes where Terraform is skipped. It copies the
 small deployment bundle over SSH and uses the immutable digest returned by the
 publishing job. Health and UI checks use QA's public HTTP address. Failure prevents
-production infrastructure promotion. Production application deployment remains D11.
+production infrastructure promotion. Production deployment uses that same digest after the existing prod approval gate.
 
 QA uses existing AWS/SSH secrets plus SSH_KNOWN_HOSTS, a public variable containing
 AWS-verified host keys under alias takeaway-qa. It is configured for the current
@@ -62,3 +62,5 @@ A changed key fails closed; do not disable host verification or blindly trust a 
 Merged runs remain serialized by the existing pipeline concurrency group. Manual
 local deployments should not run alongside Actions. No sample reset runs in CI.
 The existing database volume and server-generated secrets remain in place.
+
+D11 requires prod SSH_KNOWN_HOSTS as described in [deployment setup](../../deploy/README.md#production-d11). No deployment from the development PC is needed.

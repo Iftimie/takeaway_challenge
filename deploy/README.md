@@ -55,3 +55,32 @@ $env:DOCKER_CONTEXT = 'desktop-linux'
 
 It uses port 8768 and a dedicated `takeaway-d8-test` Compose project, then removes
 that test project's containers and volume. It does not touch the development DB.
+
+
+## Production (D11)
+
+GitHub Actions deploys after QA smoke checks and the existing prod environment
+approval. Both environments receive the same published image digest. Production
+runs on its own server with Compose project `takeaway-prod`, its own PostgreSQL
+volume, and first-run server-generated secrets. No database or sample data is copied.
+
+Before the first merge, set prod's `SSH_KNOWN_HOSTS` variable with the verified
+production host keys (alias `takeaway-prod`). On the current development computer,
+the previously AWS-verified keys have been prepared in an ignored local file:
+
+```powershell
+Get-Content ci-results/prod-pinned-hosts -Raw | gh variable set SSH_KNOWN_HOSTS --env prod --repo Iftimie/takeaway_challenge
+```
+
+If the server has been recreated since verification, obtain and verify its new
+keys first. Existing prod AWS and SSH secrets remain in use.
+
+After merging, wait for QA, approve production, then open the production URL in
+the job summary. Confirm the QA and prod image digests match. Initial production
+has no admin or sample data. Later admin creation uses the existing interactive
+command with `-p takeaway-prod` on the production server.
+
+Manual debugging uses `bash deploy.sh IMAGE prod`; omitting the environment
+preserves the earlier QA default. Normal deployment happens only in Actions.
+Terraform runs only when infrastructure/workflow files change; app-only merges
+still deploy to both environments. Migration rollback is not automatic.
